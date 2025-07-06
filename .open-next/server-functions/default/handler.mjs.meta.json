@@ -2286,7 +2286,7 @@
       "format": "cjs"
     },
     ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.js": {
-      "bytes": 6791,
+      "bytes": 7617,
       "imports": [
         {
           "path": "fs",
@@ -2758,8 +2758,8 @@
       ],
       "format": "cjs"
     },
-    ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
-      "bytes": 73791,
+    ".open-next/server-functions/default/.next/server/app/api/systems/ping/route.js": {
+      "bytes": 1181,
       "imports": [
         {
           "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js",
@@ -2774,7 +2774,7 @@
         {
           "path": ".open-next/server-functions/default/.next/server/webpack-runtime.js",
           "kind": "require-call",
-          "original": "../../webpack-runtime.js"
+          "original": "../../../../webpack-runtime.js"
         }
       ],
       "format": "cjs"
@@ -2835,8 +2835,50 @@
       ],
       "format": "cjs"
     },
+    ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
+      "bytes": 73791,
+      "imports": [
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js",
+          "kind": "require-call",
+          "original": "next/dist/compiled/next-server/app-page.runtime.prod.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js",
+          "kind": "require-call",
+          "original": "next/dist/compiled/next-server/app-route.runtime.prod.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/webpack-runtime.js",
+          "kind": "require-call",
+          "original": "../../webpack-runtime.js"
+        }
+      ],
+      "format": "cjs"
+    },
+    ".open-next/server-functions/default/.next/server/app/api/[[...route]]/route.js": {
+      "bytes": 91087,
+      "imports": [
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js",
+          "kind": "require-call",
+          "original": "next/dist/compiled/next-server/app-page.runtime.prod.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js",
+          "kind": "require-call",
+          "original": "next/dist/compiled/next-server/app-route.runtime.prod.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/webpack-runtime.js",
+          "kind": "require-call",
+          "original": "../../../webpack-runtime.js"
+        }
+      ],
+      "format": "cjs"
+    },
     ".open-next/server-functions/default/node_modules/next/dist/server/require.js": {
-      "bytes": 13297,
+      "bytes": 13798,
       "imports": [
         {
           "path": "path",
@@ -2904,14 +2946,24 @@
           "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\_not-found\\page.js"
         },
         {
-          "path": ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js",
+          "path": ".open-next/server-functions/default/.next/server/app/api/systems/ping/route.js",
           "kind": "require-call",
-          "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\favicon.ico\\route.js"
+          "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\api\\systems\\ping\\route.js"
         },
         {
           "path": ".open-next/server-functions/default/.next/server/app/page.js",
           "kind": "require-call",
           "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\page.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js",
+          "kind": "require-call",
+          "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\favicon.ico\\route.js"
+        },
+        {
+          "path": ".open-next/server-functions/default/.next/server/app/api/[[...route]]/route.js",
+          "kind": "require-call",
+          "original": "C:\\Users\\takut\\MyDev\\Project01\\fragbase2\\.open-next\\server-functions\\default\\.next\\server\\app\\api\\[[...route]]\\route.js"
         }
       ],
       "format": "cjs"
@@ -4152,7 +4204,7 @@
       "format": "esm"
     },
     ".open-next/server-functions/default/index.mjs": {
-      "bytes": 71063,
+      "bytes": 71347,
       "imports": [
         {
           "path": "node:module",
@@ -5137,7 +5189,7 @@
           "bytesInOutput": 3013
         },
         ".open-next/server-functions/default/node_modules/next/dist/server/load-manifest.js": {
-          "bytesInOutput": 5659
+          "bytesInOutput": 6444
         },
         ".open-next/server-functions/default/node_modules/react/cjs/react.production.min.js": {
           "bytesInOutput": 6789
@@ -5214,14 +5266,20 @@
         ".open-next/server-functions/default/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js": {
           "bytesInOutput": 46993
         },
-        ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
-          "bytesInOutput": 75101
+        ".open-next/server-functions/default/.next/server/app/api/systems/ping/route.js": {
+          "bytesInOutput": 1252
         },
         ".open-next/server-functions/default/.next/server/app/page.js": {
           "bytesInOutput": 34548
         },
+        ".open-next/server-functions/default/.next/server/app/favicon.ico/route.js": {
+          "bytesInOutput": 75102
+        },
+        ".open-next/server-functions/default/.next/server/app/api/[[...route]]/route.js": {
+          "bytesInOutput": 100173
+        },
         ".open-next/server-functions/default/node_modules/next/dist/server/require.js": {
-          "bytesInOutput": 10605
+          "bytesInOutput": 10803
         },
         ".open-next/server-functions/default/node_modules/next/dist/lib/interop-default.js": {
           "bytesInOutput": 363
@@ -5386,10 +5444,10 @@
           "bytesInOutput": 1621
         },
         ".open-next/server-functions/default/index.mjs": {
-          "bytesInOutput": 49068
+          "bytesInOutput": 49323
         }
       },
-      "bytes": 1965561
+      "bytes": 2068225
     }
   }
 }
