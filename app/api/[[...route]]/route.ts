@@ -242,5 +242,108 @@ app.post("/settings", async (c) => {
     }
 })
 
+//特定の投稿を取得する
+app.get("/settings/:id", async (c) => {
+    try {
+        const db = drizzle(
+            (getCloudflareContext().env as any).DB as unknown as D1Database
+        )
+
+        const idParam = c.req.param('id')
+        const id = Number(idParam)
+
+        if (isNaN(id)) {
+            return c.json(
+                { ok: false, error: "Invalid ID format" },
+                400
+            )
+        }
+
+        const result = await db
+            .select()
+            .from(settings)
+            .where(eq(settings.id, id))
+            .get()
+
+        if (!result) {
+            return c.json(
+                { ok: false, error: "Setting not found" },
+                404
+            )
+        }
+
+        // ゲーム固有設定をパース
+        let gameSpecificSettings: GameSpecificSettings = {}
+        try {
+            gameSpecificSettings = result.gameSpecificSettings
+                ? JSON.parse(result.gameSpecificSettings) as GameSpecificSettings
+                : {}
+        } catch (e) {
+            console.error('JSON parse error:', e)
+        }
+
+        const roleLabel = getRoleLabel(result.game, result.role)
+        const fpsExperienceLabel = getFpsExperienceLabel(result.fpsExperience)
+        const dpiLabel = getDpiLabel(result.dpi)
+        const deviceLabel = getDeviceLabel(result.device || "マウス")
+
+        // フロントエンドの型に合わせてデータを変換
+        const baseData = {
+            id: result.id,
+            gameTitle: result.game,
+            role: roleLabel,
+            dpi: dpiLabel,
+            comment: result.comment || "",
+            createdAt: result.createdAt ? new Date(result.createdAt).toISOString().split('T')[0] : "",
+            fpsExperience: fpsExperienceLabel,
+            character: result.character || "不明",
+            device: deviceLabel,
+        }
+
+        // ゲーム固有の設定を追加
+        let transformedData
+        switch (result.game) {
+            case 'APEX':
+                transformedData = {
+                    ...baseData,
+                    sensitivity: gameSpecificSettings.sensitivity || 0,
+                    aimSensitivity: gameSpecificSettings.aimSensitivity || 0,
+                    reactcurve: gameSpecificSettings.reactcurve || "リニア",
+                    deadZone: gameSpecificSettings.deadZone || "なし",
+                }
+                break
+            case 'VALORANT':
+                transformedData = {
+                    ...baseData,
+                    sensitivity: gameSpecificSettings.sensitivity || 0,
+                }
+                break
+            case 'OVERWATCH2':
+                transformedData = {
+                    ...baseData,
+                    sensitivity: gameSpecificSettings.sensitivity || 0,
+                    scopedSensitivity: gameSpecificSettings.scopedSensitivity || 0,
+                    aimAssist: gameSpecificSettings.aimAssist || "50%",
+                }
+                break
+            default:
+                transformedData = {
+                    ...baseData,
+                    sensitivity: 0,
+                }
+        }
+
+        return c.json({
+            ok: true,
+            data: transformedData,
+        })
+    } catch (error) {
+        return c.json(
+            { ok: false, error: (error as Error).message },
+            500
+        )
+    }
+})
+
 export const GET = handle(app);
 export const POST = handle(app);
