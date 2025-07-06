@@ -3,7 +3,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare"
 import { drizzle } from "drizzle-orm/d1"
 import { eq, and, desc } from "drizzle-orm"
 import type { InferSelectModel } from 'drizzle-orm'
-import { settings } from "@/db/schema"
+import { settings, comments } from "@/db/schema"
 import { handle } from "hono/vercel"
 import { getRoleLabel } from '@/constants/role'
 import { getFpsExperienceLabel } from '@/constants/fpsExperience'
@@ -14,6 +14,7 @@ import { getDeviceLabel } from '@/constants/device'
 const app = new Hono().basePath("/api")
 
 type Setting = InferSelectModel<typeof settings>
+type Comment = InferSelectModel<typeof comments>
 
 type GameSpecificSettings = {
     sensitivity?: number
@@ -344,6 +345,110 @@ app.get("/settings/:id", async (c) => {
         )
     }
 })
+
+//コメントを取得する
+app.get("/settings/:id/comments", async (c) => {
+    try {
+        const db = drizzle(
+            (getCloudflareContext().env as any).DB as unknown as D1Database
+        )
+
+        const idParam = c.req.param('id')
+        const settingId = Number(idParam)
+
+        if (isNaN(settingId)) {
+            return c.json(
+                { ok: false, error: "Invalid setting ID format" },
+                400
+            )
+        }
+
+        const result = await db
+            .select()
+            .from(comments)
+            .where(eq(comments.settingId, settingId))
+            .orderBy(desc(comments.createdAt))
+            .all()
+
+        const transformedComments = result.map((comment: Comment) => ({
+            id: comment.id,
+            settingId: comment.settingId,
+            content: comment.content,
+            author: comment.author || "匿名ユーザー",
+            createdAt: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('ja-JP') : "",
+        }))
+
+        return c.json({
+            ok: true,
+            comments: transformedComments,
+        })
+    } catch (error) {
+        return c.json(
+            { ok: false, error: (error as Error).message },
+            500
+        )
+    }
+})
+
+// コメント作成
+app.post("/settings/:id/comments", async (c) => {
+    try {
+        const db = drizzle(
+            (getCloudflareContext().env as any).DB as unknown as D1Database
+        )
+
+        const idParam = c.req.param('id')
+        const settingId = Number(idParam)
+
+        if (isNaN(settingId)) {
+            return c.json(
+                { ok: false, error: "Invalid setting ID format" },
+                400
+            )
+        }
+
+        const body = await c.req.json()
+
+        // 基本的なバリデーション（zodの代わり）
+        if (!body.content || typeof body.content !== 'string' || body.content.trim().length === 0) {
+            return c.json({
+                ok: false,
+                error: "コメント内容は必須です"
+            }, 400)
+        }
+
+        // データベースに挿入
+        const result = await db
+            .insert(comments)
+            .values({
+                settingId: settingId,
+                content: body.content.trim(),
+                author: body.author || null,
+            })
+            .returning()
+
+        // 挿入されたデータを取得
+        const insertedComment = result[0]
+        const transformedComment = {
+            id: insertedComment.id,
+            settingId: insertedComment.settingId,
+            content: insertedComment.content,
+            author: insertedComment.author || "匿名ユーザー",
+            createdAt: insertedComment.createdAt ? new Date(insertedComment.createdAt).toLocaleDateString('ja-JP') : "",
+        }
+
+        return c.json({
+            ok: true,
+            comment: transformedComment,
+        })
+    } catch (error) {
+        return c.json(
+            { ok: false, error: (error as Error).message },
+            500
+        )
+    }
+})
+
 
 export const GET = handle(app);
 export const POST = handle(app);
