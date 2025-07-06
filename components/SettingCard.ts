@@ -16,11 +16,11 @@ export default function SettingCard({ searchHook }: SettingCardProps) {
     const searchParams = useSearchParams();
 
     if (loading && settings.length === 0) {
-        return (
-            // <section className="mb-6 flex flex-col items-center">
-            //     <p>Loading...</p>
-            // </section>
-        )
+        // return (
+        //     // <section className="mb-6 flex flex-col items-center">
+        //     //     <p>Loading...</p>
+        //     // </section>
+        // )
     }
 
     if (error) {
@@ -81,5 +81,5 @@ export default function SettingCard({ searchHook }: SettingCardProps) {
 //             </div>
 //         </section>
 
-//     )
-// }
+    // )
+}

@@ -60,5 +60,5 @@ export default function CommentsSection({ settingId }: CommentsSectionProps) {
 //             </div>
 //         </div>
 //     </section>
-);
+// );
 }
