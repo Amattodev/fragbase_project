@@ -22,7 +22,7 @@ COPY . .
 RUN rm -rf .open-next || true
 
 # workerdバイナリに実行権限を付与
-RUN chmod +x /app/node_modules/@cloudflare/workerd-linux-64/bin/workerd || true
+RUN find /app/node_modules -name "workerd*" -type f -exec chmod +x {} \; || true
 
 
 # Wrangler開発サーバー用ポートを公開
