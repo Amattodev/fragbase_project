@@ -22,7 +22,8 @@
 		{
 			"binding": "DB",
 			"database_name": "fragbase",
-			"database_id": "f17aae6e-3d7a-44e3-90e0-54375031e5ea"
+			"database_id": "f17aae6e-3d7a-44e3-90e0-54375031e5ea",
+			"migrations_dir": "drizzle/migrations"
 		}
 	]
 	/**
