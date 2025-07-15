@@ -23,18 +23,16 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-          <>
-            <script async src="https://www.googletagmanager.com/gtag/js?id=G-13FE8LDX23"></script>
-                <script dangerouslySetInnerHTML={{
-                  __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-13FE8LDX23"></script>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
 
-                  gtag('config', 'G-13FE8LDX23');
-                `,
-                }}
-          </>
+            gtag('config', 'G-13FE8LDX23');
+          `,
+        }} />
       </head>
       <body className={`${inter.className} min-h-screen bg-[#1F1F1F] text-[#F5F5F5] p-4`}>
         <div className="flex flex-col min-h-screen">
