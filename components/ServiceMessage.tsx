@@ -13,7 +13,7 @@ export default function ServiceMessage({
       <br />
       <br />
       <br />
-      FragBaseは現在α版として運営しています。
+      FRAGBASEは現在α版として運営しています。
       <br />
       まだ整っていない部分もありますが、皆さんの声や投稿をもとに、
       <br />
