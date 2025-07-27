@@ -4,6 +4,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
+		"dev:db": "node scripts/init-dev-db.js",
+		"dev:setup": "npm run dev:db && npm run dev",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
@@ -18,6 +20,8 @@
 		"@radix-ui/react-select": "^2.2.5",
 		"@radix-ui/react-slider": "^1.3.5",
 		"@radix-ui/react-slot": "^1.2.3",
+		"@types/better-sqlite3": "^7.6.13",
+		"better-sqlite3": "^12.2.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"dotenv": "^17.0.1",

@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { drizzle } from "drizzle-orm/d1";
 import { eq, and, desc } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import { settings, comments } from "@/db/schema";
+import { getDatabase } from "@/lib/db";
 import { handle } from "hono/vercel";
 import { getRoleLabel } from "@/constants/role";
 import { getFpsExperienceLabel } from "@/constants/fpsExperience";
@@ -48,9 +47,7 @@ const mapLabelToKey = (game: string, label: string): string => {
 // 設定の全件取得
 app.get("/settings", async (c) => {
   try {
-    const db = drizzle(
-      (getCloudflareContext().env as any).DB as unknown as D1Database
-    );
+    const db = getDatabase();
 
     //クエリパラメータ取得
     const gameFilter = c.req.query("game");
@@ -190,9 +187,7 @@ app.get("/settings", async (c) => {
 // 設定新規作成
 app.post("/settings", async (c) => {
   try {
-    const db = drizzle(
-      (getCloudflareContext().env as any).DB as unknown as D1Database
-    );
+    const db = getDatabase();
 
     const body = await c.req.json();
 
@@ -263,9 +258,7 @@ app.post("/settings", async (c) => {
 //特定の投稿を取得する
 app.get("/settings/:id", async (c) => {
   try {
-    const db = drizzle(
-      (getCloudflareContext().env as any).DB as unknown as D1Database
-    );
+    const db = getDatabase();
 
     const idParam = c.req.param("id");
     const id = Number(idParam);
@@ -359,9 +352,7 @@ app.get("/settings/:id", async (c) => {
 //コメントを取得する
 app.get("/settings/:id/comments", async (c) => {
   try {
-    const db = drizzle(
-      (getCloudflareContext().env as any).DB as unknown as D1Database
-    );
+    const db = getDatabase();
 
     const idParam = c.req.param("id");
     const settingId = Number(idParam);
@@ -399,9 +390,7 @@ app.get("/settings/:id/comments", async (c) => {
 // コメント作成
 app.post("/settings/:id/comments", async (c) => {
   try {
-    const db = drizzle(
-      (getCloudflareContext().env as any).DB as unknown as D1Database
-    );
+    const db = getDatabase();
 
     const idParam = c.req.param("id");
     const settingId = Number(idParam);
