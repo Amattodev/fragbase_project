@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { settings, comments } from "@/db/schema";
+import { settings, comments, likes, likesUniqueIndex } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { handle } from "hono/vercel";
 import { getRoleLabel } from "@/constants/role";
@@ -105,63 +105,77 @@ app.get("/settings", async (c) => {
     const hasMore = result.length > limit;
     const actualData = hasMore ? result.slice(0, limit) : result;
 
+    // いいね数を取得する関数;
+    const getLikesCount = async (settingId: number) => {
+      const result = await db
+        .select()
+        .from(likes)
+        .where(eq(likes.settingId, settingId))
+        .all();
+      return result.length || 0;
+    };
     //データを変換
-    const transformedData = actualData.map((setting: Setting) => {
-      let gameSpecificSettings: GameSpecificSettings = {};
-      try {
-        gameSpecificSettings = setting.gameSpecificSettings
-          ? (JSON.parse(setting.gameSpecificSettings) as GameSpecificSettings)
-          : {};
-      } catch (e) {
-        console.error("JSON parse error:", e);
-      }
-      const roleLabel = getRoleLabel(setting.game, setting.role);
-      const fpsExperienceLabel = getFpsExperienceLabel(setting.fpsExperience);
-      const dpiLabel = getDpiLabel(setting.dpi);
-      const deviceLabel = getDeviceLabel(setting.device || "マウス");
+    const transformedData = await Promise.all(
+      actualData.map(async (setting: Setting) => {
+        let gameSpecificSettings: GameSpecificSettings = {};
+        try {
+          gameSpecificSettings = setting.gameSpecificSettings
+            ? (JSON.parse(setting.gameSpecificSettings) as GameSpecificSettings)
+            : {};
+        } catch (e) {
+          console.error("JSON parse error:", e);
+        }
+        const roleLabel = getRoleLabel(setting.game, setting.role);
+        const fpsExperienceLabel = getFpsExperienceLabel(setting.fpsExperience);
+        const dpiLabel = getDpiLabel(setting.dpi);
+        const deviceLabel = getDeviceLabel(setting.device || "マウス");
+        const likesCount = await getLikesCount(setting.id);
 
-      // ゲームタイトルに応じた変換
-      const baseData = {
-        id: setting.id,
-        gameTitle: setting.game,
-        role: roleLabel,
-        dpi: dpiLabel,
-        comment: setting.comment || "",
-        createdAt: setting.createdAt
-          ? new Date(setting.createdAt).toISOString().split("T")[0]
-          : "",
-        fpsExperience: fpsExperienceLabel,
-        character: setting.character || "不明",
-        device: deviceLabel,
-      };
+        // ゲームタイトルに応じた変換
+        // TODO:カウント情報を追加する
+        const baseData = {
+          id: setting.id,
+          gameTitle: setting.game,
+          role: roleLabel,
+          dpi: dpiLabel,
+          comment: setting.comment || "",
+          createdAt: setting.createdAt
+            ? new Date(setting.createdAt).toISOString().split("T")[0]
+            : "",
+          fpsExperience: fpsExperienceLabel,
+          character: setting.character || "不明",
+          device: deviceLabel,
+          likesCount: likesCount,
+        };
 
-      // ゲーム固有の設定を追加
-      switch (setting.game) {
-        case "APEX":
-          return {
-            ...baseData,
-            sensitivity: gameSpecificSettings.sensitivity || 0,
-            aimSensitivity: gameSpecificSettings.aimSensitivity || 0,
-            reactcurve: gameSpecificSettings.reactcurve || "リニア",
-            deadZone: gameSpecificSettings.deadZone || "なし",
-          };
-        case "VALORANT":
-          return {
-            ...baseData,
-            sensitivity: gameSpecificSettings.sensitivity || 0,
-          };
-        case "OVERWATCH2":
-          return {
-            ...baseData,
-            sensitivity: gameSpecificSettings.sensitivity || 0,
-          };
-        default:
-          return {
-            ...baseData,
-            sensitivity: 0,
-          };
-      }
-    });
+        // ゲーム固有の設定を追加
+        switch (setting.game) {
+          case "APEX":
+            return {
+              ...baseData,
+              sensitivity: gameSpecificSettings.sensitivity || 0,
+              aimSensitivity: gameSpecificSettings.aimSensitivity || 0,
+              reactcurve: gameSpecificSettings.reactcurve || "リニア",
+              deadZone: gameSpecificSettings.deadZone || "なし",
+            };
+          case "VALORANT":
+            return {
+              ...baseData,
+              sensitivity: gameSpecificSettings.sensitivity || 0,
+            };
+          case "OVERWATCH2":
+            return {
+              ...baseData,
+              sensitivity: gameSpecificSettings.sensitivity || 0,
+            };
+          default:
+            return {
+              ...baseData,
+              sensitivity: 0,
+            };
+        }
+      })
+    );
 
     return c.json({
       ok: true,
@@ -387,6 +401,37 @@ app.get("/settings/:id/comments", async (c) => {
   }
 });
 
+//いいね数を取得
+app.get("/settings/:id/likes/count", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const settingId = Number(idParam);
+
+    if (isNaN(settingId)) {
+      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
+    }
+    const result = await db
+      .select()
+      .from(likes)
+      .where(eq(likes.settingId, settingId))
+      .all();
+
+    return c.json({
+      ok: true,
+      likesCount: result.length,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
 // コメント作成
 app.post("/settings/:id/comments", async (c) => {
   try {
@@ -442,6 +487,72 @@ app.post("/settings/:id/comments", async (c) => {
       ok: true,
       comment: transformedComment,
     });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
+// いいねを追加/削除する
+app.post("/settings/:id/likes", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const settingId = Number(idParam);
+
+    if (isNaN(settingId)) {
+      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
+    }
+
+    const body = await c.req.json();
+    const userIdentifier = body.userIdentifier;
+
+    if (!userIdentifier) {
+      return c.json(
+        {
+          ok: false,
+          error: "userIdentifier is required",
+        },
+        400
+      );
+    }
+
+    //既存のいいねをチェック
+    const existingLike = await db
+      .select()
+      .from(likes)
+      .where(
+        and(
+          eq(likes.settingId, settingId),
+          eq(likes.userIdentifier, userIdentifier)
+        )
+      )
+      .get();
+
+    if (existingLike) {
+      await db
+        .delete(likes)
+        .where(
+          and(
+            eq(likes.settingId, settingId),
+            eq(likes.userIdentifier, userIdentifier)
+          )
+        );
+      return c.json({
+        ok: true,
+        message: "Like removed successfully",
+      });
+    } else {
+      // いいねを追加
+      await db.insert(likes).values({
+        settingId: settingId,
+        userIdentifier: userIdentifier,
+      });
+
+      return c.json({
+        ok: true,
+        message: "Like added successfully",
+      });
+    }
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
