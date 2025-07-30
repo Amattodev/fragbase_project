@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
 import FilterArea from "@/components/FilterArea";
 import SettingCard from "@/components/SettingCard";
+import ServiceMessage from "@/components/ServiceMessage";
 import { useSettingSearch } from "@/features/settings/useSettingSearch";
 import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const searchHook = useSettingSearch()
+  const searchHook = useSettingSearch();
 
   useEffect(() => {
     //urlクエリパラメータから検索条件を復元
@@ -17,10 +18,10 @@ function HomeContent() {
       role: searchParams.get("role") || undefined,
       character: searchParams.get("character") || undefined,
       fpsExperience: searchParams.get("fpsExperience") || undefined,
-    }
+    };
 
     // 検索条件がある場合は条件付き検索、なければ全件取得
-    const hasFilters = Object.values(filters).some(value => value);
+    const hasFilters = Object.values(filters).some((value) => value);
     if (hasFilters) {
       searchHook.setFilters(filters);
       searchHook.searchSettings(filters);
@@ -31,6 +32,9 @@ function HomeContent() {
 
   return (
     <>
+      {/* サービスメッセージ */}
+      <ServiceMessage />
+
       {/* フィルター検索エリア */}
       <FilterArea searchHook={searchHook} />
 

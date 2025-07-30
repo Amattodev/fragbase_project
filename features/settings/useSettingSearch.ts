@@ -100,7 +100,6 @@ export const useSettingSearch = (): UseSettingsSearchReturn => {
         const url = queryString
           ? `/api/settings?${queryString}`
           : "/api/settings";
-
         const response = await fetch(url);
 
         if (!response.ok) {
