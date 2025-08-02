@@ -26,6 +26,14 @@ export default function Footer() {
         >
           お問い合わせ
         </a>
+        <a
+          href="https://polarized-help-c1e.notion.site/243debc6a1db80039349fb82b962e7d5?v=243debc6a1db80399d75000c84bdd97e"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-while transition-colors"
+        >
+          今後の機能一覧
+        </a>
       </div>
       <p>© 2025 FragBase</p>
     </footer>
