@@ -6,8 +6,6 @@ import Footer from "@/components/FooterPart";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-
 //TODO: SEO設計時にメタディスクリプションを設定する
 export const metadata: Metadata = {
   title: "FRAGBASE - FPSゲーマーのための設定共有プラットフォーム",
