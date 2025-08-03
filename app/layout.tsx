@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     siteName: "FRAGBASE",
     images: [
       {
-        url: "/fragbase_project/public/fragbase_ogp.png",
+        url: "/fragbase_ogp.png",
         width: 1200,
         height: 630,
         alt: "FragBase",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     title: "FRAGBASE - FPSゲーマーのための設定共有プラットフォーム",
     description:
       "APEXやVALORANTなど、FPSの感度設定・DPI・キャラ別設定が探せるユーザー投稿型掲示板サービス。他人の設定から学べる新しい発見を。",
-    images: ["/fragbase_project/public/fragbase_ogp.png"],
+    images: ["/fragbase_ogp.png"],
   },
   robots: {
     index: true,
