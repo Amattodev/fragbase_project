@@ -12,7 +12,7 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 export const metadata: Metadata = {
   title: "FRAGBASE - FPSゲーマーのための設定共有プラットフォーム",
   description:
-    "APEXやVALORANTなど、FPSの感度設定・DPI・キャラ別設定が探せる共有サービス。他人の設定から学べる新しい発見を。",
+    "APEXやVALORANTなど、FPSの感度設定・DPI・キャラ別設定が探せるユーザー投稿型掲示板サービス。他人の設定から学べる新しい発見を。",
   keywords: [
     "FPS",
     "ゲーム設定",
@@ -24,31 +24,30 @@ export const metadata: Metadata = {
     "設定共有",
     "キャラ別設定",
   ],
-  // TODO: SNSシェアの際にリンクカード表示に使われる
-  // openGraph: {
-  //   title: "FragBase - みんなのFPS設定",
-  //   description:
-  //     "FPSプレイヤーの感度・DPI・キャラ別設定を共有・検索できるコミュニティ",
-  //   url: "https://fragbaseapp.com",
-  //   siteName: "FragBase",
-  //   images: [
-  //     {
-  //       url: "/og-image.png",
-  //       width: 1200,
-  //       height: 630,
-  //       alt: "FragBase",
-  //     },
-  //   ],
-  //   locale: "ja_JP",
-  //   type: "website",
-  // },
-  // twitter: {
-  //   card: "summary_large_image",
-  //   title: "FragBase - みんなのFPS設定",
-  //   description:
-  //     "FPSプレイヤーの感度・DPI・キャラ別設定を共有・検索できるコミュニティ",
-  //   images: ["/twitter-image.png"],
-  // },
+  openGraph: {
+    title: "FRAGBASE - FPSゲーマーのための設定共有プラットフォーム",
+    description:
+      "APEXやVALORANTなど、FPSの感度設定・DPI・キャラ別設定が探せるユーザー投稿型掲示板サービス。他人の設定から学べる新しい発見を。",
+    url: "https://fragbaseapp.com",
+    siteName: "FRAGBASE",
+    images: [
+      {
+        url: "/fragbase_project/public/fragbase_ogp.png",
+        width: 1200,
+        height: 630,
+        alt: "FragBase",
+      },
+    ],
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FRAGBASE - FPSゲーマーのための設定共有プラットフォーム",
+    description:
+      "APEXやVALORANTなど、FPSの感度設定・DPI・キャラ別設定が探せるユーザー投稿型掲示板サービス。他人の設定から学べる新しい発見を。",
+    images: ["/fragbase_project/public/fragbase_ogp.png"],
+  },
   robots: {
     index: true,
     follow: true,
