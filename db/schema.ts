@@ -5,6 +5,41 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+export const posts = sqliteTable("posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  contentHtml: text("content_html").notNull(),
+  norm: text("norm").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdAt: integer("created_at").default(Date.now()),
+  updatedAt: integer("updated_at").default(Date.now()),
+});
+
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  norm: text("norm").notNull(),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postTags = sqliteTable("post_tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  postId: integer("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  tagId: integer("tag_id")
+    .notNull()
+    .references(() => tags.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postTagsUniqueIndex = uniqueIndex("post_tags_unique_index").on(
+  postTags.postId,
+  postTags.tagId
+);
+
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   // 基本情報
