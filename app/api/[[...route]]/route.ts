@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { eq, and, desc } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { settings, comments, likes, posts, tags, postTags } from "@/db/schema";
+import { settings, comments, likes, posts } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
 import { toSlug, normalizeTitle } from "@/lib/slug";
@@ -292,7 +292,7 @@ app.put("/posts/:id", async (c) => {
         content: body.content,
         contentHtml,
         norm,
-        updateAt: Date.now(),
+        updatedAt: Date.now(),
       })
       .where(eq(posts.id, id))
       .returning();
