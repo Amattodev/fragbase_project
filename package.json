@@ -17,7 +17,11 @@
 	},
 	"dependencies": {
 		"@milkdown/core": "^7.15.3",
+		"@milkdown/ctx": "^7.15.3",
+		"@milkdown/plugin-listener": "^7.15.3",
+		"@milkdown/plugin-slash": "^7.15.3",
 		"@milkdown/preset-commonmark": "^7.15.3",
+		"@milkdown/react": "^7.15.3",
 		"@opennextjs/cloudflare": "^1.4.0",
 		"@radix-ui/react-select": "^2.2.5",
 		"@radix-ui/react-slider": "^1.3.5",
