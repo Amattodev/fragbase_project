@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { settings, comments, likes, likesUniqueIndex } from "@/db/schema";
+import { settings, comments, likes, posts, tags, postTags } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
+import { markdownToHtml } from "@/lib/markdown";
+import { toSlug, normalizeTitle } from "@/lib/slug";
 import { handle } from "hono/vercel";
 import { getRoleLabel } from "@/constants/role";
 import { getFpsExperienceLabel } from "@/constants/fpsExperience";
@@ -186,6 +188,184 @@ app.get("/settings", async (c) => {
         hasMore,
         currentPage: Math.floor(offset / limit) + 1,
       },
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+// 画像をクライアントから直接ImagesにアップロードするためのURL発行
+app.get("/images/upload-token", async (c) => {
+  try {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    if (!accountId || !apiToken) {
+      return c.json({ ok: false, error: "Cloudflare設定が不正です" }, 500);
+    }
+
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const uploadData = await response.json();
+    if (!uploadData.success) {
+      return c.json({ ok: false, error: "アップロードURL取得に失敗" }, 500);
+    }
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
+//空白の下書きを作成
+app.post("/posts", async (c) => {
+  try {
+    const db = getDatabase();
+
+    const initialTitle = "無題の記事";
+    const initialContent = "";
+    const slug = toSlug(initialTitle);
+    const norm = normalizeTitle(initialTitle);
+    const contentHtml = await markdownToHtml(initialContent);
+
+    const result = await db
+      .insert(posts)
+      .values({
+        slug,
+        title: initialTitle,
+        content: initialContent,
+        contentHtml,
+        norm,
+        status: "draft",
+      })
+      .returning();
+
+    return c.json({
+      ok: true,
+      post: result[0],
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+// 記事の更新
+app.put("/posts/:id", async (c) => {
+  try {
+    const db = getDatabase();
+    const id = Number(c.req.param("id"));
+    const body = await c.req.json();
+
+    if (isNaN(id)) {
+      return c.json({ ok: false, error: "Invalid ID format" }, 400);
+    }
+
+    if (!body.title || !body.content) {
+      return c.json({ ok: false, error: "タイトルと本文は必須です" }, 400);
+    }
+
+    const contentHtml = await markdownToHtml(body.content);
+    const norm = normalizeTitle(body.title);
+
+    const result = await db
+      .update(posts)
+      .set({
+        title: body.title,
+        content: body.content,
+        contentHtml,
+        norm,
+        updateAt: Date.now(),
+      })
+      .where(eq(posts.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    return c.json({
+      ok: true,
+      post: result[0],
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+// 記事の個別取得
+app.get("/posts/:id", async (c) => {
+  try {
+    const db = getDatabase();
+    const id = Number(c.req.param("id"));
+
+    if (isNaN(id)) {
+      return c.json({ ok: false, error: "Invalid ID format" }, 400);
+    }
+
+    const result = await db.select().from(posts).where(eq(posts.id, id)).get();
+
+    if (!result) {
+      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    return c.json({
+      ok: true,
+      post: result,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+// 公開ページでの記事表示（スラッグで取得）
+app.get("/posts/:id/:slug", async (c) => {
+  try {
+    const db = getDatabase();
+    const slug = c.req.param("slug");
+
+    const result = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.slug, slug))
+      .get();
+
+    if (!result) {
+      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    return c.json({
+      ok: true,
+      post: result,
     });
   } catch (error) {
     return c.json(
