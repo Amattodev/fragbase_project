@@ -746,3 +746,4 @@ app.post("/settings/:id/likes", async (c) => {
 
 export const GET = handle(app);
 export const POST = handle(app);
+export const PUT = handle(app);

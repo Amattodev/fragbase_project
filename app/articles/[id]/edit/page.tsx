@@ -1,241 +1,196 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
-import { commonmark } from "@milkdown/preset-commonmark";
-import { MilkdownProvider, useInstance } from "@milkdown/react";
+import { useParams, useRouter } from "next/navigation";
+import EditorComponent from "@/components/Editor";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-interface UploadTokenResponse {
+interface Post {
+  id: number;
+  title: string;
+  content: string;
+  status: string;
+  slug: string;
+}
+
+interface ApiResponse {
   ok: boolean;
-  uploadUrl?: string;
-  imageId?: string;
+  post?: Post;
   error?: string;
 }
 
-interface CloudflareUploadResult {
-  success: boolean;
-  result?: {
-    id: string;
-  };
-  errors?: any[];
-}
+export default function ArticleEditPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [post, setPost] = useState<Post | null>(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-interface EditorProps {
-  content: string;
-  onChange: (markdown: string) => void;
-  onSave?: () => void;
-}
+  const articleId = params.id as string;
 
-export default function EditorComponent({
-  content,
-  onChange,
-  onSave,
-}: EditorProps) {
-  const [editorContent, setEditorContent] = useState(content);
-
-  // 画像アップロード処理
-  const handleImageUpload = useCallback(async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        try {
-          const tokenRes = await fetch("/api/images/upload-token");
-          const tokenData = (await tokenRes.json()) as UploadTokenResponse;
-
-          if (!tokenData.ok || !tokenData.uploadUrl) {
-            throw new Error("アップロードトークンの取得に失敗");
-          }
-
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const uploadRes = await fetch(tokenData.uploadUrl, {
-            method: "POST",
-            body: formData,
-          });
-
-          const uploadResult =
-            (await uploadRes.json()) as CloudflareUploadResult;
-
-          if (!uploadResult.success || !uploadResult.result) {
-            throw new Error("画像のアップロードに失敗");
-          }
-
-          const imageUrl = `https://imagedelivery.net/${process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH}/${uploadResult.result.id}/public`;
-          const imageText = `![${file.name}](${imageUrl})`;
-          const newContent = editorContent + "\n\n" + imageText + "\n\n";
-          setEditorContent(newContent);
-          onChange(newContent);
-        } catch (error) {
-          console.error("画像アップロードエラー:", error);
-          alert("画像のアップロードに失敗しました");
-        }
-      }
-    };
-    input.click();
-  }, [editorContent, onChange]);
-
-  // YouTube URL埋め込み
-  const handleYouTubeEmbed = useCallback(() => {
-    const url = prompt("YouTubeのURLを入力してください:");
-    if (
-      url &&
-      (url.includes("youtube.com/watch") || url.includes("youtu.be/"))
-    ) {
-      const newContent = editorContent + "\n\n" + url + "\n\n";
-      setEditorContent(newContent);
-      onChange(newContent);
-    } else if (url) {
-      alert("有効なYouTubeのURLを入力してください");
-    }
-  }, [editorContent, onChange]);
-
-  // 手動保存
-  const handleManualSave = useCallback(() => {
-    if (onSave) {
-      onSave();
-    }
-  }, [onSave]);
-
-  // 自動保存のデバウンス処理
+  // 記事データの取得
   useEffect(() => {
-    if (!editorContent || !onSave) return;
-    const timeoutId = setTimeout(() => onSave(), 1500);
-    return () => clearTimeout(timeoutId);
-  }, [editorContent, onSave]);
-
-  return (
-    <div className="h-full">
-      {/* ツールバー */}
-      <div className="mb-4 flex gap-2">
-        <Button
-          onClick={handleImageUpload}
-          variant="outline"
-          size="sm"
-          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
-        >
-          📷 画像を挿入
-        </Button>
-        <Button
-          onClick={handleYouTubeEmbed}
-          variant="outline"
-          size="sm"
-          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
-        >
-          🎥 YouTube
-        </Button>
-        <Button
-          onClick={handleManualSave}
-          variant="outline"
-          size="sm"
-          className="bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
-        >
-          💾 保存
-        </Button>
-      </div>
-
-      {/* エディタ本体 */}
-      <div className="h-[calc(100%-60px)] bg-[#2B2B2B] rounded-lg overflow-hidden p-4">
-        <MilkdownProvider>
-          <MilkdownEditor
-            content={content}
-            onChange={(newContent) => {
-              setEditorContent(newContent);
-              onChange(newContent);
-            }}
-          />
-        </MilkdownProvider>
-      </div>
-    </div>
-  );
-}
-
-// シンプル版エディタコンポーネント
-function MilkdownEditor({
-  content,
-  onChange,
-}: {
-  content: string;
-  onChange: (content: string) => void;
-}) {
-  const [loading, get] = useInstance();
-  const [editor, setEditor] = useState<any>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    console.log("useEffect - loading:", loading);
-    const initEditor = async () => {
-      console.log("エディタ初期化中...");
-      //   if (loading || editor) return;
+    const fetchPost = async () => {
       try {
-        console.log("エディタ初期化開始");
-        // const editorInstance = Editor.make()
-        //   .config((ctx) => {
-        //     ctx.set(defaultValueCtx, content);
-        //   })
-        //   .use(commonmark);
-        const instance = get();
-        if (!instance) {
-          console.error("エディタインスタンスが取得できません");
-          return;
+        const res = await fetch(`/api/posts/${articleId}`);
+        const data = await res.json() as ApiResponse;
+        
+        if (data.ok && data.post) {
+          setPost(data.post);
+          setTitle(data.post.title);
+          setContent(data.post.content);
+        } else {
+          console.error("記事の取得に失敗:", data.error);
+          router.push("/");
         }
-
-        await instance.create();
-
-        setIsReady(true);
-
-        // // エディタを作成
-        // console.log("エディタインスタンス作成中...");
-        // await get().create(editorInstance);
-        // setEditor(editorInstance);
-        // console.log("エディタインスタンス作成完了");
-
-        // 変更の監視（シンプルなアプローチ）
-        // setTimeout(() => {
-        //   console.log("エディタの変更監視を設定中");
-        //   const editorDiv = document.querySelector("[data-milkdown-root]");
-        //   if (editorDiv) {
-        //     console.log("エディタ要素が見つかりました");
-        //     editorDiv.addEventListener("input", () => {
-        //       try {
-        //         get().action((ctx) => {
-        //           // マークダウン内容を取得する処理
-        //           onChange(content); // 暫定的にcontentをそのまま返す
-        //         });
-        //       } catch (error) {
-        //         console.log("エディタ内容取得エラー:", error);
-        //       }
-        //     });
-        //   }
-        // }, 1000);
       } catch (error) {
-        console.error("エディタ初期化エラー:", error);
-        setIsReady(false);
+        console.error("記事取得エラー:", error);
+        router.push("/");
+      } finally {
+        setLoading(false);
       }
     };
 
-    const timeoutId = setTimeout(() => {
-      console.log("エディタ初期化タイムアウト");
-      initEditor();
-    }, 100);
-    return () => clearTimeout(timeoutId);
-  }, [get]);
+    if (articleId) {
+      fetchPost();
+    }
+  }, [articleId, router]);
+
+  // 保存処理
+  const handleSave = useCallback(async () => {
+    if (!post || saving) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content,
+        }),
+      });
+
+      const data = await res.json() as ApiResponse;
+      if (data.ok && data.post) {
+        console.log("保存成功");
+        setPost(data.post);
+      } else {
+        console.error("保存失敗:", data.error);
+        alert("保存に失敗しました");
+      }
+    } catch (error) {
+      console.error("保存エラー:", error);
+      alert("保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  }, [post, title, content, saving]);
+
+  // プレビューページへ遷移
+  const handlePreview = () => {
+    if (post) {
+      window.open(`/articles/${post.id}/${post.slug}`, "_blank");
+    }
+  };
+
+  // ホームに戻る
+  const handleGoHome = () => {
+    router.push("/");
+  };
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-[#F5F5F5]">
-        エディタを読み込み中...
+      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+        <div>記事を読み込み中...</div>
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+        <div>記事が見つかりません</div>
       </div>
     );
   }
 
   return (
-    <div
-      className="h-full w-full prose prose-invert max-w-none"
-      data-milkdown-root
-    />
+    <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5]">
+      {/* ヘッダー */}
+      <div className="border-b border-gray-700 p-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={handleGoHome}
+              variant="outline"
+              size="sm"
+              className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+            >
+              ← ホーム
+            </Button>
+            <h1 className="text-xl font-bold">記事編集</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handlePreview}
+              variant="outline"
+              size="sm"
+              className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+            >
+              プレビュー
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
+            >
+              {saving ? "保存中..." : "保存"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* メインコンテンツ */}
+      <div className="max-w-6xl mx-auto p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-120px)]">
+          {/* エディタ部分 */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">タイトル</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="記事のタイトルを入力..."
+                className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-2">本文（Markdown）</label>
+              <div className="h-[calc(100vh-240px)]">
+                <EditorComponent
+                  content={content}
+                  onChange={setContent}
+                  onSave={handleSave}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* プレビュー部分 */}
+          <div className="bg-[#2B2B2B] rounded-lg p-4 overflow-auto">
+            <h3 className="text-lg font-semibold mb-4">プレビュー</h3>
+            <div className="prose prose-invert max-w-none">
+              <h1 className="text-2xl font-bold mb-4">{title || "タイトルなし"}</h1>
+              <div dangerouslySetInnerHTML={{ __html: content }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

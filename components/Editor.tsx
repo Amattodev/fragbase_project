@@ -1,19 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import {
-  Editor,
-  rootCtx,
-  defaultValueCtx,
-  editorViewOptionsCtx,
-} from "@milkdown/core";
-import { commonmark } from "@milkdown/preset-commonmark";
-import {
-  MilkdownProvider,
-  ProsemirrorAdapterProvider,
-  useInstance,
-} from "@milkdown/react";
-import { ProsemirrorAdapter } from "@milkdown/adapter-prosemirror";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+
+// 動的インポートでMDEditorを読み込み（SSR回避）
+const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
 interface UploadTokenResponse {
   ok: boolean;
@@ -27,7 +18,7 @@ interface CloudflareUploadResult {
   result?: {
     id: string;
   };
-  errors?: any[];
+  errors?: unknown[];
 }
 
 interface EditorProps {
@@ -117,6 +108,13 @@ export default function EditorComponent({
     return () => clearTimeout(timeoutId);
   }, [editorContent, onSave]);
 
+  // エディタの値変更ハンドラ
+  const handleEditorChange = (value?: string) => {
+    const newContent = value || "";
+    setEditorContent(newContent);
+    onChange(newContent);
+  };
+
   return (
     <div className="h-full">
       {/* ツールバー */}
@@ -148,94 +146,23 @@ export default function EditorComponent({
       </div>
 
       {/* エディタ本体 */}
-      <div className="h-[calc(100%-60px)] bg-[#2B2B2B] rounded-lg overflow-hidden">
-        <MilkdownProvider>
-          <ProsemirrorAdapterProvider>
-            <MilkdownEditor
-              content={content}
-              onChange={(newContent) => {
-                setEditorContent(newContent);
-                onChange(newContent);
-              }}
-            />
-          </ProsemirrorAdapterProvider>
-        </MilkdownProvider>
+      <div 
+        className="h-[calc(100%-60px)] rounded-lg overflow-hidden"
+        data-color-mode="dark"
+      >
+        <MDEditor
+          value={editorContent}
+          onChange={handleEditorChange}
+          height={500}
+          preview="edit"
+          hideToolbar={false}
+          visibleDragbar={false}
+          data-color-mode="dark"
+          style={{
+            backgroundColor: "#2B2B2B",
+          }}
+        />
       </div>
     </div>
   );
-}
-
-// 分離されたエディタコンポーネント
-function MilkdownEditor({
-  content,
-  onChange,
-}: {
-  content: string;
-  onChange: (content: string) => void;
-}) {
-  console.log("MilkdownEditor rendered with content:", content);
-  const [loading, get] = useInstance();
-  console.log("MilkdownEditor - loading:", loading);
-
-  useEffect(() => {
-    console.log("MilkdownEditor useEffect - loading:", loading);
-    const createEditor = async () => {
-      if (loading) return;
-      console.log("Creating Milkdown editor...");
-
-      const editor = await Editor.make()
-        .config((ctx) => {
-          ctx.set(
-            rootCtx,
-            document.getElementById("milkdown-editor") ||
-              document.createElement("div")
-          );
-          ctx.set(defaultValueCtx, content);
-          ctx.set(editorViewOptionsCtx, {
-            attributes: {
-              class:
-                "prose prose-invert max-w-none min-h-[400px] p-4 focus:outline-none bg-[#2B2B2B] text-[#F5F5F5] rounded-lg",
-            },
-          });
-        })
-        .use(commonmark)
-        .create();
-
-      console.log("Milkdown editor created:", editor);
-
-      // エディタの変更を監視
-      editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        const update = () => {
-          const markdown = view.state.doc.textContent || "";
-          onChange(markdown);
-        };
-
-        console.log("Setting up editor input listeners...");
-
-        // 少し遅延させてから監視開始
-        setTimeout(() => {
-          view.dom.addEventListener("input", update);
-          view.dom.addEventListener("keyup", update);
-        }, 100);
-      });
-    };
-
-    console.log("Initializing Milkdown editor...");
-
-    createEditor().catch(console.error);
-  }, [loading, content, onChange]);
-
-  if (loading) {
-    return (
-      <div
-        className="p-4 text-center 
-  text-[#F5F5F5]"
-      >
-        エディタを読み込み中...
-      </div>
-    );
-  }
-
-  return <div id="milkdown-editor" className="h-full w-full" />;
 }
