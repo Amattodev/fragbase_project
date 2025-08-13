@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { extractHeadings } from "@/lib/markdown";
 
 // 動的インポートでMDEditorを読み込み（SSR回避）
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
@@ -84,17 +85,68 @@ export default function EditorComponent({
   // YouTube URL埋め込み
   const handleYouTubeEmbed = useCallback(() => {
     const url = prompt("YouTubeのURLを入力してください:");
-    if (
-      url &&
-      (url.includes("youtube.com/watch") || url.includes("youtu.be/"))
-    ) {
-      const newContent = editorContent + "\n\n" + url + "\n\n";
-      setEditorContent(newContent);
-      onChange(newContent);
-    } else if (url) {
-      alert("有効なYouTubeのURLを入力してください");
+    if (url) {
+      const videoId = extractVideoId(url);
+      if (videoId) {
+        const embedText = `[youtube:${videoId}]`;
+        const newContent = editorContent + "\n\n" + embedText + "\n\n";
+        setEditorContent(newContent);
+        onChange(newContent);
+      } else {
+        alert("有効なYouTubeのURLを入力してください");
+      }
     }
   }, [editorContent, onChange]);
+
+  const extractVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    return null;
+  };
+
+  const handleVideoEmbed = useCallback(
+    (service: "youtube" | "vimeo" | "tiktok") => {
+      const serviceConfig = {
+        youtube: {
+          promptMessage: "YouTubeのURLを入力してください:",
+          extract: extractVideoId,
+        },
+        // vimeo: {
+        //   promptMessage: "VimeoのURLを入力してください:",
+        //   extract: extractVimeoId,
+        // },
+        // tiktok: {
+        //   promptMessage: "TikTokのURLを入力してください:",
+        //   extract: extractaTikTokId,
+        // },
+      };
+
+      const config = serviceConfig[service];
+      const url = prompt(config.promptMessage);
+      if (url) {
+        const videoId = config.extract(url);
+        if (videoId) {
+          const embedText = `[${service}:${videoId}]`;
+          const newContent = editorContent + "\n\n" + embedText + "\n\n";
+          setEditorContent(newContent);
+          onChange(newContent);
+        } else {
+          alert(`有効な${service}のURLを入力してください`);
+        }
+      }
+    },
+    [editorContent, onChange]
+  );
 
   // 手動保存
   const handleManualSave = useCallback(() => {
@@ -138,7 +190,7 @@ export default function EditorComponent({
           📷 画像を挿入
         </Button>
         <Button
-          onClick={handleYouTubeEmbed}
+          onClick={() => handleVideoEmbed("youtube")}
           variant="outline"
           size="sm"
           className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"

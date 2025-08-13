@@ -744,6 +744,49 @@ app.post("/settings/:id/likes", async (c) => {
   }
 });
 
+// 記事の削除
+app.delete("/posts/:id", async (c) => {
+  try {
+    const db = getDatabase();
+    const id = Number(c.req.param("id"));
+
+    if (isNaN(id)) {
+      return c.json({ ok: false, error: "Invalid ID format" }, 400);
+    }
+
+    // 記事が存在するかチェック
+    const existingPost = await db.select().from(posts).where(eq(posts.id, id)).get();
+    
+    if (!existingPost) {
+      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    // 記事を削除
+    const result = await db
+      .delete(posts)
+      .where(eq(posts.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      return c.json({ ok: false, error: "削除に失敗しました" }, 500);
+    }
+
+    return c.json({
+      ok: true,
+      message: "記事が削除されました",
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
 export const GET = handle(app);
 export const POST = handle(app);
 export const PUT = handle(app);
+export const DELETE = handle(app);

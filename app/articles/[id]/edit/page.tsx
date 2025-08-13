@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import EditorComponent from "@/components/Editor";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ export default function ArticleEditPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [originalContent, setOriginalContent] = useState({
     title: "",
     content: "",
@@ -143,16 +145,41 @@ export default function ArticleEditPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // プレビューページへ遷移
-  const handlePreview = () => {
-    if (post) {
-      window.open(`/articles/${post.id}/${post.slug}`, "_blank");
-    }
-  };
-
   // ホームに戻る
   const handleGoHome = () => {
     router.push("/");
+  };
+
+  // 記事削除処理
+  const handleDelete = async () => {
+    if (!post || deleting) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        console.log("記事が削除されました");
+        router.push("/");
+      } else {
+        console.error("削除失敗:", data.error);
+        alert("削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("削除エラー:", error);
+      alert("削除に失敗しました");
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  // 削除ダイアログを開く
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
   };
 
   if (loading) {
@@ -170,6 +197,29 @@ export default function ArticleEditPage() {
       </div>
     );
   }
+
+  //動画埋め込み処理
+  const VideoEmbedComponent = ({ text }: { text: string }) => {
+    const youtubeMatch = text.match(/\[youtube:([^\]]+)\]/);
+    if (youtubeMatch) {
+      const videoId = youtubeMatch[1];
+      return (
+        <div className="my-6">
+          <iframe
+            width="100%"
+            height="315"
+            src={`https://www.youtube.com/embed/${videoId}`}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="rounded-lg shadow-lg"
+          />
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5]">
@@ -194,6 +244,14 @@ export default function ArticleEditPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDeleteClick}
+              variant="outline"
+              size="sm"
+              className="bg-red-600 border-red-600 text-white hover:bg-red-700 hover:border-red-700"
+            >
+              削除
+            </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
@@ -267,11 +325,19 @@ export default function ArticleEditPage() {
                         {children}
                       </h3>
                     ),
-                    p: ({ children }) => (
-                      <p className="mb-4 text-[#E5E5E5] leading-relaxed">
-                        {children}
-                      </p>
-                    ),
+                    p: ({ children }) => {
+                      const text = React.Children.toArray(children).join("");
+
+                      if (text.match(/\[(youtube|vimeo|tiktok):[^\]]+\]/)) {
+                        return <VideoEmbedComponent text={text} />;
+                      }
+
+                      return (
+                        <p className="mb-4 text-[#E5E5E5] leading-relaxed">
+                          {children}
+                        </p>
+                      );
+                    },
                     ul: ({ children }) => (
                       <ul className="list-disc pl-6 mb-4 text-[#E5E5E5]">
                         {children}
@@ -346,6 +412,36 @@ export default function ArticleEditPage() {
           </div>
         </div>
       </div>
+
+      {/* 削除確認ダイアログ */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#2B2B2B] p-6 rounded-lg max-w-md w-full mx-4 border border-gray-600">
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F5F5]">記事を削除</h3>
+            <p className="text-[#E5E5E5] mb-6">
+              本当にこの記事を削除しますか？<br />
+              この操作は取り消すことができません。
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => setShowDeleteDialog(false)}
+                variant="outline"
+                className="bg-[#1F1F1F] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+                disabled={deleting}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleDelete}
+                className="bg-red-600 text-white hover:bg-red-700"
+                disabled={deleting}
+              >
+                {deleting ? "削除中..." : "削除する"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

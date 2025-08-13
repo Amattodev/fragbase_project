@@ -1,6 +1,7 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
+import remarkGfm from "remark-gfm";
 import rehypeStringify from "rehype-stringify";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 
@@ -15,40 +16,64 @@ function autoEmbedYouTube(html: string): string {
   });
 }
 
+export const processVideoEmbeds = (html: string): string => {
+  return html.replace(
+    /\[youtube:([^\]]+)\]/g,
+    (match, videoId) => `
+          <div class="video-embed my-6">
+            <iframe
+              width="100%"
+              height="315"
+              src="https://www.youtube.com/embed/${videoId}"
+              title="YouTube video player"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              class="rounded-lg shadow-lg"
+            ></iframe>
+          </div>
+        `
+  );
+};
+
 export async function markdownToHtml(markdown: string): Promise<string> {
-  const customSchema = {
-    ...defaultSchema,
-    tagNames: [...(defaultSchema.tagNames || []), "iframe"],
-    attribute: {
-      ...defaultSchema.attributes,
-      iframe: [
-        "width",
-        "height",
-        "src",
-        "title",
-        "frameborder",
-        "allow",
-        "allowfullscreen",
-      ],
-    },
-  };
+  const result = await unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkRehype)
+    .use(rehypeSanitize, {
+      // 動画埋め込みを許可するようにサニタイズ設定を更新
+      ...defaultSchema,
+      tagNames: [...(defaultSchema.tagNames || []), "iframe", "blockquote"],
+      attributes: {
+        ...defaultSchema.attributes,
+        iframe: [
+          "src",
+          "width",
+          "height",
+          "frameborder",
+          "allow",
+          "allowfullscreen",
+          "title",
+          "class",
+        ],
+        blockquote: ["class", "cite", "data-video-id"],
+        div: [...(defaultSchema.attributes?.div || []), "class"],
+      },
+      protocols: {
+        ...defaultSchema.protocols,
+        src: ["https"],
+      },
+    })
+    .use(rehypeStringify)
+    .process(markdown);
 
-  try {
-    const file = await unified()
-      .use(remarkParse)
-      .use(remarkRehype)
-      .use(rehypeSanitize, customSchema)
-      .use(rehypeStringify)
-      .process(markdown);
-    let html = String(file);
+  let html = result.toString();
 
-    html = autoEmbedYouTube(html);
+  // 動画埋め込み処理
+  html = processVideoEmbeds(html);
 
-    return html;
-  } catch (error) {
-    console.error("Markdown変換エラー:", error);
-    return "";
-  }
+  return html;
 }
 
 // Markdownから見出しを抽出する（目次用）
