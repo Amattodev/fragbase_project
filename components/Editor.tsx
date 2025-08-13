@@ -25,12 +25,14 @@ interface EditorProps {
   content: string;
   onChange: (markdown: string) => void;
   onSave?: () => void;
+  hasUnsavedChanges?: boolean;
 }
 
 export default function EditorComponent({
   content,
   onChange,
   onSave,
+  hasUnsavedChanges = false,
 }: EditorProps) {
   const [editorContent, setEditorContent] = useState(content);
 
@@ -101,12 +103,20 @@ export default function EditorComponent({
     }
   }, [onSave]);
 
-  // 自動保存のデバウンス処理
+  // キーボードショートカットで保存
   useEffect(() => {
-    if (!editorContent || !onSave) return;
-    const timeoutId = setTimeout(() => onSave(), 1500);
-    return () => clearTimeout(timeoutId);
-  }, [editorContent, onSave]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        if (onSave) {
+          onSave();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onSave]);
 
   // エディタの値変更ハンドラ
   const handleEditorChange = (value?: string) => {
@@ -139,14 +149,25 @@ export default function EditorComponent({
           onClick={handleManualSave}
           variant="outline"
           size="sm"
-          className="bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
+          className={`${
+            hasUnsavedChanges
+              ? "bg-[#FF6B6B] text-white hover:bg-[#FF5252] animate-pulse"
+              : "bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
+          }`}
         >
-          💾 保存
+          {hasUnsavedChanges ? "💾 未保存" : "💾 保存"}
         </Button>
+
+        {hasUnsavedChanges && (
+          <div className="flex items-center text-sm text-[#FF6B6B]">
+            <span className="inline-block w-2 h-2 bg-[#FF6B6B] rounded-full mr-2 animate-pulse"></span>
+            未保存の変更があります
+          </div>
+        )}
       </div>
 
       {/* エディタ本体 */}
-      <div 
+      <div
         className="h-[calc(100%-60px)] rounded-lg overflow-hidden"
         data-color-mode="dark"
       >
