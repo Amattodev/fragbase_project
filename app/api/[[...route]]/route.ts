@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, like } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { settings, comments, likes, posts } from "@/db/schema";
+import { settings, comments, likes, posts, tags, postTags } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
 import { toSlug, normalizeTitle } from "@/lib/slug";
@@ -10,11 +10,13 @@ import { getRoleLabel } from "@/constants/role";
 import { getFpsExperienceLabel } from "@/constants/fpsExperience";
 import { getDpiLabel } from "@/constants/dpi";
 import { getDeviceLabel } from "@/constants/device";
+import { Tag } from "lucide-react";
 
 const app = new Hono().basePath("/api");
 
 type Setting = InferSelectModel<typeof settings>;
 type Comment = InferSelectModel<typeof comments>;
+type Tag = InferSelectModel<typeof tags>;
 
 type GameSpecificSettings = {
   sensitivity?: number;
@@ -273,6 +275,54 @@ app.post("/posts", async (c) => {
   }
 });
 
+//タグの取得
+app.get("/tags", async (c) => {
+  try {
+    const db = getDatabase();
+    const query = c.req.query("query") || "";
+
+    let result;
+
+    if (query) {
+      result = await db
+        .select()
+        .from(tags)
+        .where(like(tags.name, `%${query}%`))
+        .limit(10)
+        .all();
+    } else {
+      const allTags = await db.select().from(tags).all();
+      const withCounts = await Promise.all(
+        allTags.map(async (tag) => {
+          const postTagsCount = await db
+            .select()
+            .from(postTags)
+            .where(eq(postTags.tagId, tag.id))
+            .all();
+          return {
+            ...tag,
+            count: postTagsCount.length,
+          };
+        })
+      );
+      result = withCounts.sort((a, b) => b.count - a.count).slice(0, 20);
+    }
+
+    return c.json({
+      ok: true,
+      tags: result,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
 // 記事の更新
 app.put("/posts/:id", async (c) => {
   try {
@@ -286,6 +336,10 @@ app.put("/posts/:id", async (c) => {
 
     if (!body.title || !body.content) {
       return c.json({ ok: false, error: "タイトルと本文は必須です" }, 400);
+    }
+
+    if (body.tags && body.tags.length > 5) {
+      return c.json({ ok: false, error: "タグは最大5つまでです" }, 400);
     }
 
     const contentHtml = await markdownToHtml(body.content);
@@ -307,9 +361,55 @@ app.put("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
+    if (body.tags) {
+      await db.delete(postTags).where(eq(postTags.postId, id));
+
+      for (const tagName of body.tags) {
+        if (!!tagName || tagName.trim() === "") continue;
+
+        const trimmedTagName = tagName.trim();
+        const tagNorm = normalizeTitle(trimmedTagName);
+
+        const existingTags = await db.select().from(tags).all();
+        let tag = existingTags.find((t) => t.name === trimmedTagName);
+
+        if (!tag) {
+          const newTag = await db
+            .insert(tags)
+            .values({
+              name: trimmedTagName,
+              norm: tagNorm,
+            })
+            .returning();
+          tag = newTag[0];
+        }
+
+        await db.insert(postTags).values({
+          postId: id,
+          tagId: tag.id,
+        });
+      }
+    }
+
+    const postTagRelations = await db
+      .select()
+      .from(postTags)
+      .where(eq(postTags.postId, id))
+      .all();
+    const tagIds = postTagRelations.map((pt) => pt.tagId);
+    let updatedPostTags: Tag[] = [];
+
+    if (tagIds.length > 0) {
+      const allTags = await db.select().from(tags).all();
+      updatedPostTags = allTags.filter((tag) => tagIds.includes(tag.id));
+    }
+
     return c.json({
       ok: true,
-      post: result[0],
+      post: {
+        ...result[0],
+        tags: updatedPostTags,
+      },
     });
   } catch (error) {
     return c.json(
@@ -332,15 +432,32 @@ app.get("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "Invalid ID format" }, 400);
     }
 
-    const result = await db.select().from(posts).where(eq(posts.id, id)).get();
+    const post = await db.select().from(posts).where(eq(posts.id, id)).get();
 
-    if (!result) {
+    if (!post) {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    const postTagRelations = await db
+      .select()
+      .from(postTags)
+      .where(eq(postTags.postId, id))
+      .all();
+
+    const tagIds = postTagRelations.map((pt) => pt.tagId);
+    let postTagsResult: Tag[] = [];
+
+    if (tagIds.length > 0) {
+      const allTags = await db.select().from(tags).all();
+      postTagsResult = allTags.filter((tag) => tagIds.includes(tag.id));
     }
 
     return c.json({
       ok: true,
-      post: result,
+      post: {
+        ...post,
+        tags: postTagsResult,
+      },
     });
   } catch (error) {
     return c.json(
@@ -755,17 +872,18 @@ app.delete("/posts/:id", async (c) => {
     }
 
     // 記事が存在するかチェック
-    const existingPost = await db.select().from(posts).where(eq(posts.id, id)).get();
-    
+    const existingPost = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, id))
+      .get();
+
     if (!existingPost) {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
     // 記事を削除
-    const result = await db
-      .delete(posts)
-      .where(eq(posts.id, id))
-      .returning();
+    const result = await db.delete(posts).where(eq(posts.id, id)).returning();
 
     if (result.length === 0) {
       return c.json({ ok: false, error: "削除に失敗しました" }, 500);

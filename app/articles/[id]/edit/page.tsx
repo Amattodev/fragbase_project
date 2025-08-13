@@ -13,6 +13,7 @@ interface Post {
   content: string;
   status: string;
   slug: string;
+  tags?: { id: number; name: string; norm: string }[];
 }
 
 interface ApiResponse {
@@ -36,6 +37,9 @@ export default function ArticleEditPage() {
     title: "",
     content: "",
   });
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
 
   const articleId = params.id as string;
 
@@ -50,9 +54,11 @@ export default function ArticleEditPage() {
           setPost(data.post);
           setTitle(data.post.title);
           setContent(data.post.content);
+          setTags(data.post.tags?.map((tag) => tag.name) || []);
           setOriginalContent({
             title: data.post.title,
             content: data.post.content,
+            tags: data.post.tags?.map((tag) => tag.name) || [],
           });
           setHasUnsavedChanges(false);
         } else {
@@ -86,6 +92,41 @@ export default function ArticleEditPage() {
     );
   };
 
+  const handleTagAdd = (tagName: string) => {
+    if (tags.length >= 5) {
+      alert("タグは最大5つまでです");
+      return;
+    }
+
+    if (!tags.includes(tagName) && tagName.trim() !== "") {
+      setTags([...tags, tagName]);
+      setTagInput("");
+      setTagSuggestions([]);
+    }
+  };
+
+  const handleTagRemove = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagInputChange = async (value: string) => {
+    setTagInput(value);
+
+    if (value.trim().length > 0) {
+      try {
+        const res = await fetch(`/api/tags?q=${encodeURIComponent(value)}`);
+        const data = await res.json();
+        if (data.ok) {
+          setTagSuggestions(data.tags);
+        }
+      } catch (error) {
+        console.error("タグの検索エラー:", error);
+      }
+    } else {
+      setTagSuggestions([]);
+    }
+  };
+
   // 保存処理
   const handleSave = useCallback(async () => {
     if (!post || saving) return;
@@ -100,6 +141,7 @@ export default function ArticleEditPage() {
         body: JSON.stringify({
           title,
           content,
+          tags,
         }),
       });
 
@@ -107,7 +149,7 @@ export default function ArticleEditPage() {
       if (data.ok && data.post) {
         console.log("保存成功");
         setPost(data.post);
-        setOriginalContent({ title, content });
+        setOriginalContent({ title, content, tags });
         setHasUnsavedChanges(false);
       } else {
         console.error("保存失敗:", data.error);
@@ -119,7 +161,7 @@ export default function ArticleEditPage() {
     } finally {
       setSaving(false);
     }
-  }, [post, title, content, saving]);
+  }, [post, title, content, tags, saving]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -283,6 +325,61 @@ export default function ArticleEditPage() {
                 }`}
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                タグ（最大5個）
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-[#7DB7E8] text-black px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleTagRemove(tag)}
+                      className="hover:bg-black hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {tags.length < 5 && (
+                <div className="relative">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => handleTagInputChange(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleTagAdd(tagInput);
+                      }
+                    }}
+                    placeholder="タグを入力してEnter"
+                    className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5]"
+                  />
+
+                  {/* タグ候補を表示 */}
+                  {tagSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 bg-[#2B2B2B] border border-gray-600 rounded-md mt-1 z-10">
+                      {tagSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          onClick={() => handleTagAdd(suggestion.name)}
+                          className="block w-full text-left px-3 py-2 hover:bg-[#3B3B3B] text-[#F5F5F5]"
+                        >
+                          {suggestion.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex-1">
               <label className="block text-sm font-medium mb-2">
                 本文（Markdown）
@@ -417,9 +514,12 @@ export default function ArticleEditPage() {
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#2B2B2B] p-6 rounded-lg max-w-md w-full mx-4 border border-gray-600">
-            <h3 className="text-lg font-semibold mb-4 text-[#F5F5F5]">記事を削除</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F5F5]">
+              記事を削除
+            </h3>
             <p className="text-[#E5E5E5] mb-6">
-              本当にこの記事を削除しますか？<br />
+              本当にこの記事を削除しますか？
+              <br />
               この操作は取り消すことができません。
             </p>
             <div className="flex justify-end gap-3">
