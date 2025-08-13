@@ -1,18 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import {
-  Editor,
-  rootCtx,
-  defaultValueCtx,
-  editorViewOptionsCtx,
-} from "@milkdown/core";
+import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
 import { commonmark } from "@milkdown/preset-commonmark";
-import {
-  MilkdownProvider,
-  ProsemirrorAdapterProvider,
-  useInstance,
-} from "@milkdown/react";
-import { ProsemirrorAdapter } from "@milkdown/adapter-prosemirror";
+import { MilkdownProvider, useInstance } from "@milkdown/react";
 import { Button } from "@/components/ui/button";
 
 interface UploadTokenResponse {
@@ -148,24 +138,22 @@ export default function EditorComponent({
       </div>
 
       {/* エディタ本体 */}
-      <div className="h-[calc(100%-60px)] bg-[#2B2B2B] rounded-lg overflow-hidden">
+      <div className="h-[calc(100%-60px)] bg-[#2B2B2B] rounded-lg overflow-hidden p-4">
         <MilkdownProvider>
-          <ProsemirrorAdapterProvider>
-            <MilkdownEditor
-              content={content}
-              onChange={(newContent) => {
-                setEditorContent(newContent);
-                onChange(newContent);
-              }}
-            />
-          </ProsemirrorAdapterProvider>
+          <MilkdownEditor
+            content={content}
+            onChange={(newContent) => {
+              setEditorContent(newContent);
+              onChange(newContent);
+            }}
+          />
         </MilkdownProvider>
       </div>
     </div>
   );
 }
 
-// 分離されたエディタコンポーネント
+// シンプル版エディタコンポーネント
 function MilkdownEditor({
   content,
   onChange,
@@ -173,69 +161,81 @@ function MilkdownEditor({
   content: string;
   onChange: (content: string) => void;
 }) {
-  console.log("MilkdownEditor rendered with content:", content);
   const [loading, get] = useInstance();
-  console.log("MilkdownEditor - loading:", loading);
+  const [editor, setEditor] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    console.log("MilkdownEditor useEffect - loading:", loading);
-    const createEditor = async () => {
-      if (loading) return;
-      console.log("Creating Milkdown editor...");
+    console.log("useEffect - loading:", loading);
+    const initEditor = async () => {
+      console.log("エディタ初期化中...");
+      //   if (loading || editor) return;
+      try {
+        console.log("エディタ初期化開始");
+        // const editorInstance = Editor.make()
+        //   .config((ctx) => {
+        //     ctx.set(defaultValueCtx, content);
+        //   })
+        //   .use(commonmark);
+        const instance = get();
+        if (!instance) {
+          console.error("エディタインスタンスが取得できません");
+          return;
+        }
 
-      const editor = await Editor.make()
-        .config((ctx) => {
-          ctx.set(
-            rootCtx,
-            document.getElementById("milkdown-editor") ||
-              document.createElement("div")
-          );
-          ctx.set(defaultValueCtx, content);
-          ctx.set(editorViewOptionsCtx, {
-            attributes: {
-              class:
-                "prose prose-invert max-w-none min-h-[400px] p-4 focus:outline-none bg-[#2B2B2B] text-[#F5F5F5] rounded-lg",
-            },
-          });
-        })
-        .use(commonmark)
-        .create();
+        await instance.create();
 
-      console.log("Milkdown editor created:", editor);
+        setIsReady(true);
 
-      // エディタの変更を監視
-      editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        const update = () => {
-          const markdown = view.state.doc.textContent || "";
-          onChange(markdown);
-        };
+        // // エディタを作成
+        // console.log("エディタインスタンス作成中...");
+        // await get().create(editorInstance);
+        // setEditor(editorInstance);
+        // console.log("エディタインスタンス作成完了");
 
-        console.log("Setting up editor input listeners...");
-
-        // 少し遅延させてから監視開始
-        setTimeout(() => {
-          view.dom.addEventListener("input", update);
-          view.dom.addEventListener("keyup", update);
-        }, 100);
-      });
+        // 変更の監視（シンプルなアプローチ）
+        // setTimeout(() => {
+        //   console.log("エディタの変更監視を設定中");
+        //   const editorDiv = document.querySelector("[data-milkdown-root]");
+        //   if (editorDiv) {
+        //     console.log("エディタ要素が見つかりました");
+        //     editorDiv.addEventListener("input", () => {
+        //       try {
+        //         get().action((ctx) => {
+        //           // マークダウン内容を取得する処理
+        //           onChange(content); // 暫定的にcontentをそのまま返す
+        //         });
+        //       } catch (error) {
+        //         console.log("エディタ内容取得エラー:", error);
+        //       }
+        //     });
+        //   }
+        // }, 1000);
+      } catch (error) {
+        console.error("エディタ初期化エラー:", error);
+        setIsReady(false);
+      }
     };
 
-    console.log("Initializing Milkdown editor...");
-
-    createEditor().catch(console.error);
-  }, [loading, content, onChange]);
+    const timeoutId = setTimeout(() => {
+      console.log("エディタ初期化タイムアウト");
+      initEditor();
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [get]);
 
   if (loading) {
     return (
-      <div
-        className="p-4 text-center 
-  text-[#F5F5F5]"
-      >
+      <div className="p-4 text-center text-[#F5F5F5]">
         エディタを読み込み中...
       </div>
     );
   }
 
-  return <div id="milkdown-editor" className="h-full w-full" />;
+  return (
+    <div
+      className="h-full w-full prose prose-invert max-w-none"
+      data-milkdown-root
+    />
+  );
 }

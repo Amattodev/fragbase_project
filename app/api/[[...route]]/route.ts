@@ -224,6 +224,12 @@ app.get("/images/upload-token", async (c) => {
     if (!uploadData.success) {
       return c.json({ ok: false, error: "アップロードURL取得に失敗" }, 500);
     }
+
+    return c.json({
+      ok: true,
+      uploadUrl: uploadData.result.uploadURL,
+      imageId: uploadData.result.id,
+    });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
