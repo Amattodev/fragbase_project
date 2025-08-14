@@ -62,6 +62,20 @@ export const postGameCategoriesUniqueIndex = uniqueIndex(
   "post_game_categories_unique_index"
 ).on(postGameCategories.postId, postGameCategories.gameCategoryId);
 
+export const postLikes = sqliteTable("post_likes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  postId: integer("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  userIdentifier: text("user_identifier").notNull(),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postLikesUniqueIndex = uniqueIndex("post_likes_unique_index").on(
+  postLikes.postId,
+  postLikes.userIdentifier
+);
+
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   // 基本情報

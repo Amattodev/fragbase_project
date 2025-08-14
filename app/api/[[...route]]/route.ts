@@ -10,6 +10,7 @@ import {
   postTags,
   gameCategories,
   postGameCategories,
+  postLikes,
 } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
@@ -697,6 +698,97 @@ app.get("/posts", async (c) => {
         total: postWithMetadata.length,
       },
     });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+//記事のいいね数を取得
+app.get("/posts/:id/likes/count", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const result = await db
+      .select()
+      .from(postLikes)
+      .where(eq(postLikes.postId, postId))
+      .all();
+    return c.json({
+      ok: true,
+      likesCount: result.length,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+//記事のいいね追加/削除
+app.post("/posts/:id/likes", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const body = await c.req.json();
+    const userIdentifier = body.userIdentifier;
+
+    if (!userIdentifier) {
+      return c.json({ ok: false, error: "User identifier is required" }, 400);
+    }
+
+    // 既存のいいねを確認
+    const existingLike = await db
+      .select()
+      .from(postLikes)
+      .where(
+        and(
+          eq(postLikes.postId, postId),
+          eq(postLikes.userIdentifier, userIdentifier)
+        )
+      )
+      .get();
+
+    if (existingLike) {
+      // いいねが既に存在する場合は削除
+      await db
+        .delete(postLikes)
+        .where(
+          and(
+            eq(postLikes.postId, postId),
+            eq(postLikes.userIdentifier, userIdentifier)
+          )
+        );
+      return c.json({ ok: true, message: "Like removed successfully" });
+    } else {
+      // いいねが存在しない場合は追加
+      await db.insert(postLikes).values({
+        postId: postId,
+        userIdentifier: userIdentifier,
+      });
+      return c.json({ ok: true, message: "Like added successfully" });
+    }
   } catch (error) {
     return c.json(
       {

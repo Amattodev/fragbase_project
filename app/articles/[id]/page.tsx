@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Heart } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -28,6 +29,9 @@ export default function ArticlePage() {
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [submittingLike, SetSubmittingLike] = useState(false);
 
   const articleId = params.id as string;
 
@@ -41,6 +45,13 @@ export default function ArticlePage() {
           // 公開記事のみ表示
           if (data.post.status === "published") {
             setPost(data.post);
+
+            // いいね取得
+            const likesRes = await fetch(`/api/posts/${articleId}/likes/count`);
+            const likesData = await likesRes.json();
+            if (likesData.ok) {
+              setLikesCount(likesData.likesCount);
+            }
           } else {
             setError("この記事は公開されていません");
           }
@@ -82,6 +93,48 @@ export default function ArticlePage() {
       </div>
     );
   }
+
+  //シェア機能
+  const handleShareOnX = () => {
+    const url = window.location.href;
+    const text = `${post?.title}\n\n`;
+    const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
+      text
+    )}&url=${encodeURIComponent(url)}`;
+    window.open(shareUrl, "_blank", "noopener,noreferrer");
+  };
+
+  //いいね機能
+  const handleLike = async () => {
+    if (!post || submittingLike) return;
+
+    SetSubmittingLike(true);
+    try {
+      const userIdentifier =
+        localStorage.getItem("userIdentifier") ||
+        (() => {
+          const id = Math.random().toString(36).substring(2, 15);
+          localStorage.setItem("userIdentifier", id);
+          return id;
+        })();
+      const res = await fetch(`/api/posts/${post.id}/likes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userIdentifier }),
+      });
+
+      if (res.ok) {
+        setIsLiked(!isLiked);
+        setLikesCount((prevCount) => (isLiked ? prevCount - 1 : prevCount + 1));
+      }
+    } catch (error) {
+      console.error("いいねエラー:", error);
+    } finally {
+      SetSubmittingLike(false);
+    }
+  };
 
   //動画埋め込み処理
   const VideoEmbedComponent = ({ text }: { text: string }) => {
@@ -258,6 +311,42 @@ export default function ArticlePage() {
             {post.content}
           </ReactMarkdown>
         </article>
+
+        <div className="mt-8 pt-6 border-t border-gray-700">
+          <div className="flex items-center gap-4">
+            {/* いいねボタン */}
+            <button
+              onClick={handleLike}
+              disabled={submittingLike}
+              className={`flex items-center 
+                        gap-2 px-4 py-2 rounded-full transition-colors 
+                        ${
+                          isLiked
+                            ? "bg-red-600 text-white hover:bg-red-700"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                        }`}
+            >
+              <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
+              <span>{likesCount}</span>
+            </button>
+            {/* シェアボタン */}
+            <button
+              onClick={handleShareOnX}
+              className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full hover:bg-gray-800 transition-colors"
+              title="Xでシェア"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              <span>シェア</span>
+            </button>
+          </div>
+        </div>
 
         {/* フッター */}
         <footer className="mt-12 pt-8 border-t border-gray-700">
