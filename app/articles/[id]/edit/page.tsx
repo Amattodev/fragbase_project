@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import EditorComponent from "@/components/Editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import MultiSelect from "@/components/MultiSelect";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -14,6 +15,11 @@ interface Post {
   status: string;
   slug: string;
   tags?: { id: number; name: string; norm: string }[];
+  gameCategories?: {
+    id: number;
+    name: string;
+    displayName: string;
+  }[];
 }
 
 interface ApiResponse {
@@ -36,10 +42,16 @@ export default function ArticleEditPage() {
   const [originalContent, setOriginalContent] = useState({
     title: "",
     content: "",
+    tags: [] as string[],
+    gameCategories: [] as string[],
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
+  const [gameCategories, setGameCategories] = useState<string[]>([]);
+  const [availableGameCategories, setAvailableGameCategories] = useState<any[]>(
+    []
+  );
 
   const articleId = params.id as string;
 
@@ -55,10 +67,15 @@ export default function ArticleEditPage() {
           setTitle(data.post.title);
           setContent(data.post.content);
           setTags(data.post.tags?.map((tag) => tag.name) || []);
+          setGameCategories(
+            data.post.gameCategories?.map((gc) => gc.name) || []
+          );
           setOriginalContent({
             title: data.post.title,
             content: data.post.content,
             tags: data.post.tags?.map((tag) => tag.name) || [],
+            gameCategories:
+              data.post.gameCategories?.map((gc) => gc.name) || [],
           });
           setHasUnsavedChanges(false);
         } else {
@@ -78,17 +95,42 @@ export default function ArticleEditPage() {
     }
   }, [articleId, router]);
 
+  // ゲームカテゴリ一覧の取得
+  useEffect(() => {
+    const fetchGameCategories = async () => {
+      try {
+        const res = await fetch("/api/game-categories");
+        const data = await res.json();
+        if (data.ok) {
+          setAvailableGameCategories(data.gameCategories);
+        }
+      } catch (error) {
+        console.error("ゲームカテゴリ取得エラー:", error);
+      }
+    };
+
+    fetchGameCategories();
+  }, []);
+
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
     setHasUnsavedChanges(
-      newTitle !== originalContent.title || content !== originalContent.content
+      newTitle !== originalContent.title ||
+        content !== originalContent.content ||
+        JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
+        JSON.stringify(gameCategories) !==
+          JSON.stringify(originalContent.gameCategories)
     );
   };
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
     setHasUnsavedChanges(
-      title !== originalContent.title || newContent !== originalContent.content
+      title !== originalContent.title ||
+        newContent !== originalContent.content ||
+        JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
+        JSON.stringify(gameCategories) !==
+          JSON.stringify(originalContent.gameCategories)
     );
   };
 
@@ -111,6 +153,7 @@ export default function ArticleEditPage() {
 
   const handleTagInputChange = async (value: string) => {
     setTagInput(value);
+    console.log("タグ入力:", value);
 
     if (value.trim().length > 0) {
       try {
@@ -125,6 +168,17 @@ export default function ArticleEditPage() {
     } else {
       setTagSuggestions([]);
     }
+  };
+
+  const handleGameCategoryChange = (newGameCategories: string[]) => {
+    setGameCategories(newGameCategories);
+    setHasUnsavedChanges(
+      title !== originalContent.title ||
+        content !== originalContent.content ||
+        JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
+        JSON.stringify(newGameCategories) !==
+          JSON.stringify(originalContent.gameCategories)
+    );
   };
 
   // 保存処理
@@ -142,6 +196,7 @@ export default function ArticleEditPage() {
           title,
           content,
           tags,
+          gameCategories,
         }),
       });
 
@@ -149,7 +204,7 @@ export default function ArticleEditPage() {
       if (data.ok && data.post) {
         console.log("保存成功");
         setPost(data.post);
-        setOriginalContent({ title, content, tags });
+        setOriginalContent({ title, content, tags, gameCategories });
         setHasUnsavedChanges(false);
       } else {
         console.error("保存失敗:", data.error);
@@ -353,7 +408,7 @@ export default function ArticleEditPage() {
                     value={tagInput}
                     onChange={(e) => handleTagInputChange(e.target.value)}
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         handleTagAdd(tagInput);
                       }
@@ -379,6 +434,18 @@ export default function ArticleEditPage() {
                   )}
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                ゲームタイトル（複数選択可）
+              </label>
+              <MultiSelect
+                options={availableGameCategories}
+                selectedValues={gameCategories}
+                onChange={handleGameCategoryChange}
+                placeholder="ゲームタイトルを選択"
+                className="w-full"
+              />
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium mb-2">

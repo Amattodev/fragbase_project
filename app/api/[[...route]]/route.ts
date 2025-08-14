@@ -1,7 +1,16 @@
 import { Hono } from "hono";
 import { eq, and, desc, like } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import { settings, comments, likes, posts, tags, postTags } from "@/db/schema";
+import {
+  settings,
+  comments,
+  likes,
+  posts,
+  tags,
+  postTags,
+  gameCategories,
+  postGameCategories,
+} from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
 import { toSlug, normalizeTitle } from "@/lib/slug";
@@ -17,6 +26,7 @@ const app = new Hono().basePath("/api");
 type Setting = InferSelectModel<typeof settings>;
 type Comment = InferSelectModel<typeof comments>;
 type Tag = InferSelectModel<typeof tags>;
+type GameCategory = InferSelectModel<typeof gameCategories>;
 
 type GameSpecificSettings = {
   sensitivity?: number;
@@ -279,7 +289,7 @@ app.post("/posts", async (c) => {
 app.get("/tags", async (c) => {
   try {
     const db = getDatabase();
-    const query = c.req.query("query") || "";
+    const query = c.req.query("q") || "";
 
     let result;
 
@@ -311,6 +321,31 @@ app.get("/tags", async (c) => {
     return c.json({
       ok: true,
       tags: result,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+//ゲームカテゴリ一覧取得
+app.get("/game-categories", async (c) => {
+  try {
+    const db = getDatabase();
+    const result = await db
+      .select()
+      .from(gameCategories)
+      .orderBy(gameCategories.name)
+      .all();
+
+    return c.json({
+      ok: true,
+      gameCategories: result,
     });
   } catch (error) {
     return c.json(
@@ -361,11 +396,12 @@ app.put("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
+    //タグの処理
     if (body.tags) {
       await db.delete(postTags).where(eq(postTags.postId, id));
 
       for (const tagName of body.tags) {
-        if (!!tagName || tagName.trim() === "") continue;
+        if (!tagName || tagName.trim() === "") continue;
 
         const trimmedTagName = tagName.trim();
         const tagNorm = normalizeTitle(trimmedTagName);
@@ -391,6 +427,30 @@ app.put("/posts/:id", async (c) => {
       }
     }
 
+    // ゲームカテゴリの処理
+    if (body.gameCategories) {
+      await db
+        .delete(postGameCategories)
+        .where(eq(postGameCategories.postId, id));
+
+      for (const gameCategoryName of body.gameCategories) {
+        if (!gameCategoryName || gameCategoryName.trim() === "") continue;
+
+        const trimmedName = gameCategoryName.trim();
+        const existingCategories = await db.select().from(gameCategories).all();
+        const gameCategory = existingCategories.find(
+          (gc) => gc.name === trimmedName
+        );
+
+        if (gameCategory) {
+          await db.insert(postGameCategories).values({
+            postId: id,
+            gameCategoryId: gameCategory.id,
+          });
+        }
+      }
+    }
+
     const postTagRelations = await db
       .select()
       .from(postTags)
@@ -404,11 +464,29 @@ app.put("/posts/:id", async (c) => {
       updatedPostTags = allTags.filter((tag) => tagIds.includes(tag.id));
     }
 
+    const postGameCategoryRelations = await db
+      .select()
+      .from(postGameCategories)
+      .where(eq(postGameCategories.postId, id))
+      .all();
+
+    const gameCategoryIds = postGameCategoryRelations.map(
+      (pgc) => pgc.gameCategoryId
+    );
+    let updatedPostGameCategories: GameCategory[] = [];
+    if (gameCategoryIds.length > 0) {
+      const allGameCategories = await db.select().from(gameCategories).all();
+      updatedPostGameCategories = allGameCategories.filter((gc) =>
+        gameCategoryIds.includes(gc.id)
+      );
+    }
+
     return c.json({
       ok: true,
       post: {
         ...result[0],
         tags: updatedPostTags,
+        gameCategories: updatedPostGameCategories,
       },
     });
   } catch (error) {
@@ -438,6 +516,7 @@ app.get("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
+    //タグ取得
     const postTagRelations = await db
       .select()
       .from(postTags)
@@ -452,11 +531,31 @@ app.get("/posts/:id", async (c) => {
       postTagsResult = allTags.filter((tag) => tagIds.includes(tag.id));
     }
 
+    // ゲームカテゴリ取得
+    const postGameCategoryRelations = await db
+      .select()
+      .from(postGameCategories)
+      .where(eq(postGameCategories.postId, id))
+      .all();
+
+    const gameCategoryIds = postGameCategoryRelations.map(
+      (pgc) => pgc.gameCategoryId
+    );
+    let postGameCategoriesResult: GameCategory[] = [];
+
+    if (gameCategoryIds.length > 0) {
+      const allGameCategories = await db.select().from(gameCategories).all();
+      postGameCategoriesResult = allGameCategories.filter((gc) =>
+        gameCategoryIds.includes(gc.id)
+      );
+    }
+
     return c.json({
       ok: true,
       post: {
         ...post,
         tags: postTagsResult,
+        gameCategories: postGameCategoriesResult,
       },
     });
   } catch (error) {

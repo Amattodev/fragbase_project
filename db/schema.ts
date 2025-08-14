@@ -40,6 +40,28 @@ export const postTagsUniqueIndex = uniqueIndex("post_tags_unique_index").on(
   postTags.tagId
 );
 
+export const gameCategories = sqliteTable("game_categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postGameCategories = sqliteTable("post_game_categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  postId: integer("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  gameCategoryId: integer("game_category_id")
+    .notNull()
+    .references(() => gameCategories.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postGameCategoriesUniqueIndex = uniqueIndex(
+  "post_game_categories_unique_index"
+).on(postGameCategories.postId, postGameCategories.gameCategoryId);
+
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   // 基本情報
