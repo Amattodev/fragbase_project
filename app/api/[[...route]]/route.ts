@@ -387,6 +387,7 @@ app.put("/posts/:id", async (c) => {
         content: body.content,
         contentHtml,
         norm,
+        status: body.status || "draft",
         updatedAt: Date.now(),
       })
       .where(eq(posts.id, id))
@@ -588,6 +589,113 @@ app.get("/posts/:id/:slug", async (c) => {
     return c.json({
       ok: true,
       post: result,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+//公開記事一覧を取得
+app.get("/posts", async (c) => {
+  try {
+    const db = getDatabase();
+
+    const status = c.req.query("status") || "published";
+    const limit = Number(c.req.query("limit")) || 10;
+    const offset = Number(c.req.query("offset")) || 0;
+
+    let result;
+
+    if (status == "published") {
+      result = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.status, "published"))
+        .orderBy(desc(posts.createdAt))
+        .limit(limit + 1)
+        .offset(offset)
+        .all();
+    } else if (status == "draft") {
+      result = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.status, "draft"))
+        .orderBy(desc(posts.createdAt))
+        .limit(limit + 1)
+        .offset(offset)
+        .all();
+    } else {
+      result = await db
+        .select()
+        .from(posts)
+        .orderBy(desc(posts.createdAt))
+        .limit(limit + 1)
+        .offset(offset)
+        .all();
+    }
+
+    const hasMore = result.length > limit;
+    const actualData = hasMore ? result.slice(0, limit) : result;
+
+    const postWithMetadata = await Promise.all(
+      actualData.map(async (post) => {
+        const postTagRelations = await db
+          .select()
+          .from(postTags)
+          .where(eq(postTags.postId, post.id))
+          .all();
+        const tagIds = postTagRelations.map((pt) => pt.tagId);
+        let postTagsResult: Tag[] = [];
+
+        if (tagIds.length > 0) {
+          const allTags = await db.select().from(tags).all();
+          postTagsResult = allTags.filter((tag) => tagIds.includes(tag.id));
+        }
+
+        const postGameCategoryRelations = await db
+          .select()
+          .from(postGameCategories)
+          .where(eq(postGameCategories.postId, post.id))
+          .all();
+        const gameCategoryIds = postGameCategoryRelations.map(
+          (pgc) => pgc.gameCategoryId
+        );
+        let postGameCategoriesResult: GameCategory[] = [];
+        if (gameCategoryIds.length > 0) {
+          const allGameCategories = await db
+            .select()
+            .from(gameCategories)
+            .all();
+          postGameCategoriesResult = allGameCategories.filter((gc) =>
+            gameCategoryIds.includes(gc.id)
+          );
+        }
+        return {
+          ...post,
+          tags: postTagsResult,
+          gameCategories: postGameCategoriesResult,
+          excerpt:
+            post.content.length > 150
+              ? post.content.substring(0, 150) + "..."
+              : post.content,
+        };
+      })
+    );
+    return c.json({
+      ok: true,
+      posts: postWithMetadata,
+      pagination: {
+        limit,
+        offset,
+        hasMore,
+        total: postWithMetadata.length,
+      },
     });
   } catch (error) {
     return c.json(

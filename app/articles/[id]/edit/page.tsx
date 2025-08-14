@@ -42,6 +42,7 @@ export default function ArticleEditPage() {
   const [originalContent, setOriginalContent] = useState({
     title: "",
     content: "",
+    status: "draft" as "draft" | "published",
     tags: [] as string[],
     gameCategories: [] as string[],
   });
@@ -52,6 +53,7 @@ export default function ArticleEditPage() {
   const [availableGameCategories, setAvailableGameCategories] = useState<any[]>(
     []
   );
+  const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const articleId = params.id as string;
 
@@ -66,6 +68,7 @@ export default function ArticleEditPage() {
           setPost(data.post);
           setTitle(data.post.title);
           setContent(data.post.content);
+          setStatus(data.post.status as "draft" | "published");
           setTags(data.post.tags?.map((tag) => tag.name) || []);
           setGameCategories(
             data.post.gameCategories?.map((gc) => gc.name) || []
@@ -73,6 +76,7 @@ export default function ArticleEditPage() {
           setOriginalContent({
             title: data.post.title,
             content: data.post.content,
+            status: data.post.status,
             tags: data.post.tags?.map((tag) => tag.name) || [],
             gameCategories:
               data.post.gameCategories?.map((gc) => gc.name) || [],
@@ -117,6 +121,7 @@ export default function ArticleEditPage() {
     setHasUnsavedChanges(
       newTitle !== originalContent.title ||
         content !== originalContent.content ||
+        status !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
         JSON.stringify(gameCategories) !==
           JSON.stringify(originalContent.gameCategories)
@@ -128,6 +133,19 @@ export default function ArticleEditPage() {
     setHasUnsavedChanges(
       title !== originalContent.title ||
         newContent !== originalContent.content ||
+        status !== originalContent.status ||
+        JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
+        JSON.stringify(gameCategories) !==
+          JSON.stringify(originalContent.gameCategories)
+    );
+  };
+
+  const handleStatusChange = (newStatus: "draft" | "published") => {
+    setStatus(newStatus);
+    setHasUnsavedChanges(
+      title !== originalContent.title ||
+        content !== originalContent.content ||
+        newStatus !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
         JSON.stringify(gameCategories) !==
           JSON.stringify(originalContent.gameCategories)
@@ -195,6 +213,7 @@ export default function ArticleEditPage() {
         body: JSON.stringify({
           title,
           content,
+          status,
           tags,
           gameCategories,
         }),
@@ -204,7 +223,7 @@ export default function ArticleEditPage() {
       if (data.ok && data.post) {
         console.log("保存成功");
         setPost(data.post);
-        setOriginalContent({ title, content, tags, gameCategories });
+        setOriginalContent({ title, content, status, tags, gameCategories });
         setHasUnsavedChanges(false);
       } else {
         console.error("保存失敗:", data.error);
@@ -340,7 +359,29 @@ export default function ArticleEditPage() {
               </div>
             )}
           </div>
+          {/* <div className="flex items-center gap-2">
+          </div> */}
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-[#F5F5F5]">
+                {status === "published" ? "公開中" : "下書き"}
+              </label>
+              <button
+                onClick={() =>
+                  handleStatusChange(status === "draft" ? "published" : "draft")
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  status === "published" ? "bg-[#7DB7E8]" : "bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    status === "published" ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
             <Button
               onClick={handleDeleteClick}
               variant="outline"
@@ -355,10 +396,18 @@ export default function ArticleEditPage() {
               className={`${
                 hasUnsavedChanges && !saving
                   ? "bg-[#FF6B6B] text-white hover:bg-[#FF5252] animate-pulse"
+                  : status === "published"
+                  ? "bg-[#22C55E] text-white hover:bg-[#16A34A]"
                   : "bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
               }`}
             >
-              {saving ? "保存中..." : hasUnsavedChanges ? "未保存" : "保存"}
+              {saving
+                ? "保存中..."
+                : hasUnsavedChanges
+                ? "未保存"
+                : status === "published"
+                ? "公開中"
+                : "下書き保存"}
             </Button>
           </div>
         </div>
