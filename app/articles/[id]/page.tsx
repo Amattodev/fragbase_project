@@ -105,6 +105,21 @@ export default function ArticlePage() {
     window.open(shareUrl, "_blank", "noopener,noreferrer");
   };
 
+  const handleCopyLink = () => {
+    const url = window.location.href;
+    const text = `${post?.title}\n${url}`;
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert("リンクをコピーしました！");
+      })
+      .catch((err) => {
+        console.error("コピーに失敗しました:", err);
+        // フォールバック: 手動でコピーできるようにプロンプト表示
+        prompt("以下のテキストをコピーしてください:", text);
+      });
+  };
+
   //いいね機能
   const handleLike = async () => {
     if (!post || submittingLike) return;
@@ -345,6 +360,32 @@ export default function ArticlePage() {
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
               <span>シェア</span>
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition-colors"
+              title="リンクをコピー"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path
+                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 
+            0-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 
+            7.07l1.71-1.71"
+                />
+              </svg>
+              <span>リンクをコピー</span>
             </button>
           </div>
         </div>
