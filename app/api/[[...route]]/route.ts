@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, desc, like } from "drizzle-orm";
+import { eq, and, desc, like, isNull } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import {
   settings,
@@ -11,6 +11,8 @@ import {
   gameCategories,
   postGameCategories,
   postLikes,
+  postComments,
+  postCommentLikes,
 } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
@@ -28,6 +30,8 @@ type Setting = InferSelectModel<typeof settings>;
 type Comment = InferSelectModel<typeof comments>;
 type Tag = InferSelectModel<typeof tags>;
 type GameCategory = InferSelectModel<typeof gameCategories>;
+type PostComment = InferSelectModel<typeof postComments>;
+type PostCommentLike = InferSelectModel<typeof postCommentLikes>;
 
 type GameSpecificSettings = {
   sensitivity?: number;
@@ -38,6 +42,14 @@ type GameSpecificSettings = {
   aimAssist?: string;
   [key: string]: any;
 };
+
+interface CommentWithMetadata extends PostComment {
+  likesCount: number;
+  isLiked?: boolean;
+  repliesCount: number;
+  author: string;
+  createdAt: string;
+}
 
 // 日本語ラベルを英語キーにマッピングする
 const mapLabelToKey = (game: string, label: string): string => {
@@ -797,6 +809,218 @@ app.post("/posts/:id/likes", async (c) => {
       },
       500
     );
+  }
+});
+
+//記事のコメントを取得
+app.get("/posts/:id/comments", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+    const userIdentifier = c.req.query("userIdentifier");
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const limit = Number(c.req.query("limit")) || 20;
+    const offset = Number(c.req.query("offset")) || 0;
+
+    const parentComments = await db
+      .select()
+      .from(postComments)
+      .where(
+        and(eq(postComments.postId, postId), isNull(postComments.parentId))
+      )
+      .orderBy(desc(postComments.createdAt))
+      .limit(limit + 1)
+      .offset(offset)
+      .all();
+    const hasMore = parentComments.length > limit;
+    const actualData = hasMore
+      ? parentComments.slice(0, limit)
+      : parentComments;
+
+    // 各コメントのメタデータを取得
+    const commentsWithMetadata = await Promise.all(
+      actualData.map(async (comment) => {
+        // いいね数を取得
+        const likes = await db
+          .select()
+          .from(postCommentLikes)
+          .where(eq(postCommentLikes.commentId, comment.id))
+          .all();
+
+        // ユーザーがいいねしているか確認
+        const isLiked = userIdentifier
+          ? likes.some((like) => like.userIdentifier === userIdentifier)
+          : false;
+
+        // 返信数を取得
+        const replies = await db
+          .select()
+          .from(postComments)
+          .where(eq(postComments.parentId, comment.id))
+          .all();
+
+        return {
+          ...comment,
+          likesCount: likes.length,
+          isLiked,
+          repliesCount: replies.length,
+          author: comment.author || "匿名ユーザー",
+          createdAt: comment.createdAt
+            ? new Date(comment.createdAt).toLocaleDateString("ja-JP", {
+                year: "numeric",
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "",
+        };
+      })
+    );
+
+    return c.json({
+      ok: true,
+      comments: commentsWithMetadata,
+      pagination: {
+        limit,
+        offset,
+        hasMore,
+      },
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
+  }
+});
+
+// 記事のコメント数取得
+app.get("/posts/:id/comments/count", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const result = await db
+      .select()
+      .from(postComments)
+      .where(eq(postComments.postId, postId))
+      .all();
+
+    return c.json({
+      ok: true,
+      commentsCount: result.length,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
+// コメント投稿（返信対応）
+app.post("/posts/:id/comments", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const body = await c.req.json();
+
+    // バリデーション
+    if (
+      !body.content ||
+      typeof body.content !== "string" ||
+      body.content.trim().length === 0
+    ) {
+      return c.json({ ok: false, error: "コメント内容は必須です" }, 400);
+    }
+
+    if (body.content.trim().length > 500) {
+      return c.json(
+        { ok: false, error: "コメントは500文字以下で入力してください" },
+        400
+      );
+    }
+
+    // 返信の場合、親コメントの存在確認
+    if (body.parentId) {
+      const parentComment = await db
+        .select()
+        .from(postComments)
+        .where(eq(postComments.id, body.parentId))
+        .get();
+
+      if (!parentComment) {
+        return c.json({ ok: false, error: "返信先が見つかりません" }, 404);
+      }
+    }
+
+    // 記事の存在確認
+    const post = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .get();
+
+    if (!post || post.status !== "published") {
+      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+    }
+
+    // データベースに挿入
+    const result = await db
+      .insert(postComments)
+      .values({
+        postId: postId,
+        parentId: body.parentId || null,
+        content: body.content.trim(),
+        author: body.author || null,
+        userIdentifier: body.userIdentifier || null,
+      })
+      .returning();
+
+    const insertedComment = result[0];
+    const transformedComment = {
+      id: insertedComment.id,
+      postId: insertedComment.postId,
+      parentId: insertedComment.parentId,
+      content: insertedComment.content,
+      author: insertedComment.author || "匿名ユーザー",
+      likesCount: 0,
+      isLiked: false,
+      repliesCount: 0,
+      createdAt: insertedComment.createdAt
+        ? new Date(insertedComment.createdAt).toLocaleDateString("ja-JP", {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+    };
+
+    return c.json({
+      ok: true,
+      comment: transformedComment,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
 
