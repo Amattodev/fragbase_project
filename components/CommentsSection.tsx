@@ -133,7 +133,7 @@ function CommentItem({
           </button>
 
           {/* 返信ボタン */}
-          {depth < 2 && (
+          {depth === 0 && (
             <button
               onClick={() => onReply(comment.id)}
               className="flex items-center gap-1 text-gray-400 hover:text-gray-300"
