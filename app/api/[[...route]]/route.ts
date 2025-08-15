@@ -1024,6 +1024,126 @@ app.post("/posts/:id/comments", async (c) => {
   }
 });
 
+// 特定コメントの返信を取得
+app.get("/posts/:postId/comments/:commentId/replies", async (c) => {
+  try {
+    const db = getDatabase();
+    const commentId = Number(c.req.param("commentId"));
+    const userIdentifier = c.req.query("userIdentifier");
+
+    if (isNaN(commentId)) {
+      return c.json({ ok: false, error: "Invalid comment ID　format" }, 400);
+    }
+
+    // 返信コメントを取得
+    const replies = await db
+      .select()
+      .from(postComments)
+      .where(eq(postComments.parentId, commentId))
+      .orderBy(postComments.createdAt)
+      .all();
+
+    // 各返信のメタデータを取得
+    const repliesWithMetadata = await Promise.all(
+      replies.map(async (reply) => {
+        const likes = await db
+          .select()
+          .from(postCommentLikes)
+          .where(eq(postCommentLikes.commentId, reply.id))
+          .all();
+
+        const isLiked = userIdentifier
+          ? likes.some((like) => like.userIdentifier === userIdentifier)
+          : false;
+
+        // 返信の返信数を取得
+        const subReplies = await db
+          .select()
+          .from(postComments)
+          .where(eq(postComments.parentId, reply.id))
+          .all();
+
+        return {
+          ...reply,
+          likesCount: likes.length,
+          isLiked,
+          repliesCount: subReplies.length,
+          author: reply.author || "匿名ユーザー",
+          createdAt: reply.createdAt
+            ? new Date(reply.createdAt).toLocaleDateString("ja-JP", {
+                year: "numeric",
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "",
+        };
+      })
+    );
+
+    return c.json({
+      ok: true,
+      replies: repliesWithMetadata,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
+// コメントにいいね
+app.post("/posts/:postId/comments/:commentId/likes", async (c) => {
+  try {
+    const db = getDatabase();
+    const commentId = Number(c.req.param("commentId"));
+
+    if (isNaN(commentId)) {
+      return c.json({ ok: false, error: "Invalid comment ID format" }, 400);
+    }
+
+    const body = await c.req.json();
+    const userIdentifier = body.userIdentifier;
+
+    if (!userIdentifier) {
+      return c.json({ ok: false, error: "User identifier is required" }, 400);
+    }
+
+    // 既存のいいねを確認
+    const existingLike = await db
+      .select()
+      .from(postCommentLikes)
+      .where(
+        and(
+          eq(postCommentLikes.commentId, commentId),
+          eq(postCommentLikes.userIdentifier, userIdentifier)
+        )
+      )
+      .get();
+
+    if (existingLike) {
+      // いいねを削除
+      await db
+        .delete(postCommentLikes)
+        .where(
+          and(
+            eq(postCommentLikes.commentId, commentId),
+            eq(postCommentLikes.userIdentifier, userIdentifier)
+          )
+        );
+      return c.json({ ok: true, liked: false });
+    } else {
+      // いいねを追加
+      await db.insert(postCommentLikes).values({
+        commentId: commentId,
+        userIdentifier: userIdentifier,
+      });
+      return c.json({ ok: true, liked: true });
+    }
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
 // 設定新規作成
 app.post("/settings", async (c) => {
   try {
