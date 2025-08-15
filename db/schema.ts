@@ -3,6 +3,7 @@ import {
   text,
   integer,
   uniqueIndex,
+  index,
 } from "drizzle-orm/sqlite-core";
 
 export const posts = sqliteTable("posts", {
@@ -75,6 +76,36 @@ export const postLikesUniqueIndex = uniqueIndex("post_likes_unique_index").on(
   postLikes.postId,
   postLikes.userIdentifier
 );
+
+export const postComments = sqliteTable("post_comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  postId: integer("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  parentId: integer("parent_id"),
+  content: text("content").notNull(),
+  author: text("author"), // コメント投稿者名（オプション）
+  userIdentifier: text("user_identifier"), // 投稿者の識別子（オプション）
+  createdAt: integer("created_at").default(Date.now()),
+  updatedAt: integer("updated_at").default(Date.now()),
+});
+
+export const postCommentLikes = sqliteTable("post_comment_likes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  commentId: integer("comment_id")
+    .notNull()
+    .references(() => postComments.id, { onDelete: "cascade" }),
+  userIdentifier: text("user_identifier").notNull(),
+  createdAt: integer("created_at").default(Date.now()),
+});
+
+export const postCommentsParentIndex = index("post_comments_parent_index").on(
+  postComments.parentId
+);
+
+export const postCommentLikesUniqueIndex = uniqueIndex(
+  "post_comment_likes_unique_index"
+).on(postCommentLikes.commentId, postCommentLikes.userIdentifier);
 
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
