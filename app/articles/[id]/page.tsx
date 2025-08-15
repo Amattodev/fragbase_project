@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import CommentSection from "@/components/CommentsSection";
 import { Heart } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -347,6 +348,8 @@ export default function ArticlePage() {
             </button>
           </div>
         </div>
+
+        <CommentSection postId={post.id} />
 
         {/* フッター */}
         <footer className="mt-12 pt-8 border-t border-gray-700">
