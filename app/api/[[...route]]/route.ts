@@ -23,6 +23,7 @@ import { getFpsExperienceLabel } from "@/constants/fpsExperience";
 import { getDpiLabel } from "@/constants/dpi";
 import { getDeviceLabel } from "@/constants/device";
 import { Tag } from "lucide-react";
+import { debug } from "console";
 
 const app = new Hono().basePath("/api");
 
@@ -583,37 +584,6 @@ app.get("/posts/:id", async (c) => {
   }
 });
 
-// 公開ページでの記事表示（スラッグで取得）
-app.get("/posts/:id/:slug", async (c) => {
-  try {
-    const db = getDatabase();
-    const slug = c.req.param("slug");
-
-    const result = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.slug, slug))
-      .get();
-
-    if (!result) {
-      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
-    }
-
-    return c.json({
-      ok: true,
-      post: result,
-    });
-  } catch (error) {
-    return c.json(
-      {
-        ok: false,
-        error: (error as Error).message,
-      },
-      500
-    );
-  }
-});
-
 //公開記事一覧を取得
 app.get("/posts", async (c) => {
   try {
@@ -812,6 +782,32 @@ app.post("/posts/:id/likes", async (c) => {
   }
 });
 
+// 記事のコメント数取得
+app.get("/posts/:id/comments/count", async (c) => {
+  try {
+    const db = getDatabase();
+    const idParam = c.req.param("id");
+    const postId = Number(idParam);
+
+    if (isNaN(postId)) {
+      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    const result = await db
+      .select()
+      .from(postComments)
+      .where(eq(postComments.postId, postId))
+      .all();
+
+    return c.json({
+      ok: true,
+      commentsCount: result.length,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
 //記事のコメントを取得
 app.get("/posts/:id/comments", async (c) => {
   try {
@@ -820,9 +816,46 @@ app.get("/posts/:id/comments", async (c) => {
     const postId = Number(idParam);
     const userIdentifier = c.req.query("userIdentifier");
 
+    console.log("=== GET コメント デバッグ ===");
+    console.log("postId:", postId);
+
     if (isNaN(postId)) {
       return c.json({ ok: false, error: "Invalid post ID format" }, 400);
     }
+
+    const post = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .get();
+
+    console.log("記事検索結果:", post);
+
+    if (!post) {
+      return c.json(
+        {
+          ok: false,
+          error: "記事が見つかりません",
+          debug: postId,
+        },
+        404
+      );
+    }
+
+    console.log("記事ステータス:", post.status);
+
+    if (post.status !== "published") {
+      return c.json(
+        {
+          ok: false,
+          error: "公開されていない記事のコメントは取得できません",
+          debug: post.status,
+        },
+        403
+      );
+    }
+
+    console.log("記事確認OK");
 
     const limit = Number(c.req.query("limit")) || 20;
     const offset = Number(c.req.query("offset")) || 0;
@@ -903,32 +936,6 @@ app.get("/posts/:id/comments", async (c) => {
   }
 });
 
-// 記事のコメント数取得
-app.get("/posts/:id/comments/count", async (c) => {
-  try {
-    const db = getDatabase();
-    const idParam = c.req.param("id");
-    const postId = Number(idParam);
-
-    if (isNaN(postId)) {
-      return c.json({ ok: false, error: "Invalid post ID format" }, 400);
-    }
-
-    const result = await db
-      .select()
-      .from(postComments)
-      .where(eq(postComments.postId, postId))
-      .all();
-
-    return c.json({
-      ok: true,
-      commentsCount: result.length,
-    });
-  } catch (error) {
-    return c.json({ ok: false, error: (error as Error).message }, 500);
-  }
-});
-
 // コメント投稿（返信対応）
 app.post("/posts/:id/comments", async (c) => {
   try {
@@ -979,7 +986,10 @@ app.post("/posts/:id/comments", async (c) => {
       .get();
 
     if (!post || post.status !== "published") {
-      return c.json({ ok: false, error: "記事が見つかりません" }, 404);
+      return c.json(
+        { ok: false, error: "記事が見つかりません", debug: postId },
+        404
+      );
     }
 
     // データベースに挿入
@@ -1141,6 +1151,40 @@ app.post("/posts/:postId/comments/:commentId/likes", async (c) => {
     }
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
+
+// 公開ページでの記事表示（スラッグで取得）
+app.get("/posts/:id/:slug", async (c) => {
+  try {
+    const db = getDatabase();
+    const slug = c.req.param("slug");
+
+    const result = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.slug, slug))
+      .get();
+
+    if (!result) {
+      return c.json(
+        { ok: false, error: "記事が見つかりません", debug: `slug: ${slug}` },
+        404
+      );
+    }
+
+    return c.json({
+      ok: true,
+      post: result,
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500
+    );
   }
 });
 

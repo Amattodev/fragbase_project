@@ -50,6 +50,14 @@ export default function CommentSection({ postId }: CommentSectionProps) {
     try {
       const currentOffset = loadMore ? offset : 0;
       const userIdentifier = getUserIdentifier();
+      console.log(
+        "Fetching comments for postId:",
+        postId,
+        "with offset:",
+        currentOffset,
+        "and userIdentifier:",
+        userIdentifier
+      );
       const res = await fetch(
         `/api/posts/${postId}/comments?limit=20&offset=${currentOffset}&userIdentifier=${userIdentifier}`
       );
