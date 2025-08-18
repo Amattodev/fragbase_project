@@ -82,53 +82,155 @@ export default function EditorComponent({
     input.click();
   }, [editorContent, onChange]);
 
-  // YouTube URL埋め込み
-  const handleYouTubeEmbed = useCallback(() => {
-    const url = prompt("YouTubeのURLを入力してください:");
-    if (url) {
-      const videoId = extractVideoId(url);
-      if (videoId) {
-        const embedText = `[youtube:${videoId}]`;
-        const newContent = editorContent + "\n\n" + embedText + "\n\n";
-        setEditorContent(newContent);
-        onChange(newContent);
-      } else {
-        alert("有効なYouTubeのURLを入力してください");
-      }
-    }
-  }, [editorContent, onChange]);
+  //   // YouTube URL埋め込み
+  //   const handleYouTubeEmbed = useCallback(() => {
+  //     const url = prompt("YouTubeのURLを入力してください:");
+  //     if (url) {
+  //       const videoId = extractVideoId(url);
+  //       if (videoId) {
+  //         const embedText = `[youtube:${videoId}]`;
+  //         const newContent = editorContent + "\n\n" + embedText + "\n\n";
+  //         setEditorContent(newContent);
+  //         onChange(newContent);
+  //       } else {
+  //         alert("有効なYouTubeのURLを入力してください");
+  //       }
+  //     }
+  //   }, [editorContent, onChange]);
 
-  const extractVideoId = (url: string): string | null => {
-    const patterns = [
+  const extractYoutubeId = (url: string): string | null => {
+    // 通常の動画
+    const videoPatterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
       /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
     ];
 
-    for (const pattern of patterns) {
+    for (const pattern of videoPatterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
-        return match[1];
+        return `video:${match[1]}`;
+      }
+    }
+    
+    // ライブ配信
+    const livePattern = /youtube\.com\/live\/([^&\n?#]+)/;
+    const liveMatch = url.match(livePattern);
+    if (liveMatch && liveMatch[1]) {
+      return `live:${liveMatch[1]}`;
+    }
+    
+    // ショート動画
+    const shortsPattern = /youtube\.com\/shorts\/([^&\n?#]+)/;
+    const shortsMatch = url.match(shortsPattern);
+    if (shortsMatch && shortsMatch[1]) {
+      return `shorts:${shortsMatch[1]}`;
+    }
+    
+    // チャンネル
+    const channelPatterns = [
+      /youtube\.com\/channel\/([^/?#]+)/,
+      /youtube\.com\/c\/([^/?#]+)/,
+      /youtube\.com\/@([^/?#]+)/,
+    ];
+    
+    for (const pattern of channelPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `channel:${match[1]}`;
       }
     }
 
     return null;
   };
 
+  const extractTwitchId = (url: string): string | null => {
+    // クリップの場合
+    const clipPatterns = [
+      /clips\.twitch\.tv\/([^/?#]+)/,
+      /twitch\.tv\/[^/]+\/clip\/([^/?#]+)/,
+    ];
+    
+    for (const pattern of clipPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `clip:${match[1]}`;
+      }
+    }
+    
+    // 動画の場合
+    const videoPattern = /twitch\.tv\/videos\/([0-9]+)/;
+    const videoMatch = url.match(videoPattern);
+    if (videoMatch && videoMatch[1]) {
+      return `video:${videoMatch[1]}`;
+    }
+    
+    // ライブ配信（チャンネル）の場合
+    const channelPattern = /twitch\.tv\/([^/?#]+)$/;
+    const channelMatch = url.match(channelPattern);
+    if (channelMatch && channelMatch[1]) {
+      return `channel:${channelMatch[1]}`;
+    }
+    
+    return null;
+  };
+
+  const extractTikTokId = (url: string): string | null => {
+    // 動画の場合
+    const videoPattern = /tiktok\.com\/@[^/]+\/video\/([0-9]+)/;
+    const videoMatch = url.match(videoPattern);
+    if (videoMatch && videoMatch[1]) {
+      return `video:${videoMatch[1]}`;
+    }
+    
+    // ユーザー（チャンネル）の場合
+    const userPattern = /tiktok\.com\/@([^/?#]+)$/;
+    const userMatch = url.match(userPattern);
+    if (userMatch && userMatch[1]) {
+      return `channel:${userMatch[1]}`;
+    }
+    
+    return null;
+  };
+
+  const extractXId = (url: string): string | null => {
+    // 投稿の場合
+    const postPatterns = [
+      /(?:twitter|x)\.com\/[^/]+\/status\/([0-9]+)/,
+      /(?:twitter|x)\.com\/i\/web\/status\/([0-9]+)/,
+    ];
+    
+    for (const pattern of postPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `post:${match[1]}`;
+      }
+    }
+    
+    // アカウントの場合
+    const accountPattern = /(?:twitter|x)\.com\/([^/?#]+)$/;
+    const accountMatch = url.match(accountPattern);
+    if (accountMatch && accountMatch[1] && !['home', 'explore', 'notifications', 'messages', 'bookmarks', 'lists'].includes(accountMatch[1])) {
+      return `account:${accountMatch[1]}`;
+    }
+    
+    return null;
+  };
+
   const handleVideoEmbed = useCallback(
-    (service: "youtube" | "vimeo" | "tiktok") => {
+    (service: "youtube" | "twitch" | "tiktok") => {
       const serviceConfig = {
         youtube: {
           promptMessage: "YouTubeのURLを入力してください:",
-          extract: extractVideoId,
+          extract: extractYoutubeId,
         },
-        // vimeo: {
-        //   promptMessage: "VimeoのURLを入力してください:",
-        //   extract: extractVimeoId,
-        // },
-        // tiktok: {
-        //   promptMessage: "TikTokのURLを入力してください:",
-        //   extract: extractaTikTokId,
-        // },
+        twitch: {
+          promptMessage: "TwitchのURLを入力してください:",
+          extract: extractTwitchId,
+        },
+        tiktok: {
+          promptMessage: "TikTokのURLを入力してください:",
+          extract: extractTikTokId,
+        },
       };
 
       const config = serviceConfig[service];
@@ -147,6 +249,21 @@ export default function EditorComponent({
     },
     [editorContent, onChange]
   );
+
+  const handleXEmbed = useCallback(() => {
+    const url = prompt("X（Twitter）のURLを入力してください:");
+    if (url) {
+      const xId = extractXId(url);
+      if (xId) {
+        const embedText = `[x:${xId}]`;
+        const newContent = editorContent + "\n\n" + embedText + "\n\n";
+        setEditorContent(newContent);
+        onChange(newContent);
+      } else {
+        alert("有効なX（Twitter）のURLを入力してください");
+      }
+    }
+  }, [editorContent, onChange]);
 
   // 手動保存
   const handleManualSave = useCallback(() => {
@@ -196,6 +313,30 @@ export default function EditorComponent({
           className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
         >
           🎥 YouTube
+        </Button>
+        <Button
+          onClick={() => handleVideoEmbed("twitch")}
+          variant="outline"
+          size="sm"
+          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+        >
+          🎥 twitch
+        </Button>
+        <Button
+          onClick={() => handleVideoEmbed("tiktok")}
+          variant="outline"
+          size="sm"
+          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+        >
+          🎥 tiktok
+        </Button>
+        <Button
+          onClick={handleXEmbed}
+          variant="outline"
+          size="sm"
+          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+        >
+          🐦 X
         </Button>
         <Button
           onClick={handleManualSave}
