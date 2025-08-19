@@ -12,12 +12,14 @@ interface UploadTokenResponse {
   uploadUrl?: string;
   imageId?: string;
   error?: string;
+  isLocal?: boolean;
 }
 
 interface CloudflareUploadResult {
   success: boolean;
   result?: {
     id: string;
+    variants?: string[];
   };
   errors?: unknown[];
 }
@@ -36,6 +38,7 @@ export default function EditorComponent({
   hasUnsavedChanges = false,
 }: EditorProps) {
   const [editorContent, setEditorContent] = useState(content);
+  const [imageCounter, setImageCounter] = useState(1);
 
   // 画像アップロード処理
   const handleImageUpload = useCallback(async () => {
@@ -68,11 +71,62 @@ export default function EditorComponent({
             throw new Error("画像のアップロードに失敗");
           }
 
-          const imageUrl = `https://imagedelivery.net/${process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH}/${uploadResult.result.id}/public`;
-          const imageText = `![${file.name}](${imageUrl})`;
-          const newContent = editorContent + "\n\n" + imageText + "\n\n";
+          // ローカル環境かCloudflare Imagesかで画像URLを切り替え
+          let imageUrl: string;
+          if (tokenData.isLocal && uploadResult.result.variants) {
+            // ローカル環境の場合はBase64データURLを使用
+            imageUrl = uploadResult.result.variants[0];
+          } else {
+            // 本番環境の場合はCloudflare ImagesのURLを生成
+            const accountHash = process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH;
+            if (!accountHash) {
+              // アカウントハッシュがない場合はローカル画像として扱う
+              imageUrl = uploadResult.result.variants?.[0] || `/images/${uploadResult.result.id}`;
+            } else {
+              imageUrl = `https://imagedelivery.net/${accountHash}/${uploadResult.result.id}/public`;
+            }
+          }
+          
+          // 現在のコンテンツから既存の画像参照番号を取得
+          const existingRefs = editorContent.match(/\[image-(\d+)\]:/g) || [];
+          const maxRef = existingRefs.reduce((max, ref) => {
+            const num = parseInt(ref.match(/\d+/)?.[0] || "0");
+            return Math.max(max, num);
+          }, 0);
+          const currentImageNum = maxRef + 1;
+          
+          // 参照リンク形式でMarkdownを生成
+          const imageRefName = `image-${currentImageNum}`;
+          const imageText = `![${file.name}][${imageRefName}]`;
+          
+          // コンテンツの末尾に参照リンクを追加（既存の参照リンクがある場合はその後に追加）
+          let newContent = editorContent;
+          
+          // 既存の参照リンクセクションを探す
+          const refSectionMatch = newContent.match(/\n\n\[image-\d+\]:.*/g);
+          if (refSectionMatch) {
+            // 既存の参照リンクセクションの最後に追加
+            const lastRefIndex = newContent.lastIndexOf(refSectionMatch[refSectionMatch.length - 1]);
+            const endOfLastRef = lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
+            newContent = 
+              newContent.slice(0, endOfLastRef) + 
+              `\n[${imageRefName}]: ${imageUrl}` + 
+              newContent.slice(endOfLastRef);
+            
+            // 画像タグを適切な位置に挿入（カーソル位置または末尾）
+            const insertPos = newContent.lastIndexOf('\n\n[image-');
+            newContent = 
+              newContent.slice(0, insertPos) + 
+              "\n\n" + imageText + 
+              newContent.slice(insertPos);
+          } else {
+            // 参照リンクセクションがない場合は新規作成
+            newContent = editorContent + "\n\n" + imageText + "\n\n[" + imageRefName + "]: " + imageUrl;
+          }
+          
           setEditorContent(newContent);
           onChange(newContent);
+          setImageCounter(currentImageNum + 1);
         } catch (error) {
           console.error("画像アップロードエラー:", error);
           alert("画像のアップロードに失敗しました");
@@ -80,23 +134,7 @@ export default function EditorComponent({
       }
     };
     input.click();
-  }, [editorContent, onChange]);
-
-  //   // YouTube URL埋め込み
-  //   const handleYouTubeEmbed = useCallback(() => {
-  //     const url = prompt("YouTubeのURLを入力してください:");
-  //     if (url) {
-  //       const videoId = extractVideoId(url);
-  //       if (videoId) {
-  //         const embedText = `[youtube:${videoId}]`;
-  //         const newContent = editorContent + "\n\n" + embedText + "\n\n";
-  //         setEditorContent(newContent);
-  //         onChange(newContent);
-  //       } else {
-  //         alert("有効なYouTubeのURLを入力してください");
-  //       }
-  //     }
-  //   }, [editorContent, onChange]);
+  }, [editorContent, onChange, imageCounter]);
 
   const extractYoutubeId = (url: string): string | null => {
     // 通常の動画
@@ -111,28 +149,28 @@ export default function EditorComponent({
         return `video:${match[1]}`;
       }
     }
-    
+
     // ライブ配信
     const livePattern = /youtube\.com\/live\/([^&\n?#]+)/;
     const liveMatch = url.match(livePattern);
     if (liveMatch && liveMatch[1]) {
       return `live:${liveMatch[1]}`;
     }
-    
+
     // ショート動画
     const shortsPattern = /youtube\.com\/shorts\/([^&\n?#]+)/;
     const shortsMatch = url.match(shortsPattern);
     if (shortsMatch && shortsMatch[1]) {
       return `shorts:${shortsMatch[1]}`;
     }
-    
+
     // チャンネル
     const channelPatterns = [
       /youtube\.com\/channel\/([^/?#]+)/,
       /youtube\.com\/c\/([^/?#]+)/,
       /youtube\.com\/@([^/?#]+)/,
     ];
-    
+
     for (const pattern of channelPatterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
@@ -149,28 +187,28 @@ export default function EditorComponent({
       /clips\.twitch\.tv\/([^/?#]+)/,
       /twitch\.tv\/[^/]+\/clip\/([^/?#]+)/,
     ];
-    
+
     for (const pattern of clipPatterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
         return `clip:${match[1]}`;
       }
     }
-    
+
     // 動画の場合
     const videoPattern = /twitch\.tv\/videos\/([0-9]+)/;
     const videoMatch = url.match(videoPattern);
     if (videoMatch && videoMatch[1]) {
       return `video:${videoMatch[1]}`;
     }
-    
+
     // ライブ配信（チャンネル）の場合
     const channelPattern = /twitch\.tv\/([^/?#]+)$/;
     const channelMatch = url.match(channelPattern);
     if (channelMatch && channelMatch[1]) {
       return `channel:${channelMatch[1]}`;
     }
-    
+
     return null;
   };
 
@@ -181,14 +219,14 @@ export default function EditorComponent({
     if (videoMatch && videoMatch[1]) {
       return `video:${videoMatch[1]}`;
     }
-    
+
     // ユーザー（チャンネル）の場合
     const userPattern = /tiktok\.com\/@([^/?#]+)$/;
     const userMatch = url.match(userPattern);
     if (userMatch && userMatch[1]) {
       return `channel:${userMatch[1]}`;
     }
-    
+
     return null;
   };
 
@@ -198,21 +236,32 @@ export default function EditorComponent({
       /(?:twitter|x)\.com\/[^/]+\/status\/([0-9]+)/,
       /(?:twitter|x)\.com\/i\/web\/status\/([0-9]+)/,
     ];
-    
+
     for (const pattern of postPatterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
         return `post:${match[1]}`;
       }
     }
-    
+
     // アカウントの場合
     const accountPattern = /(?:twitter|x)\.com\/([^/?#]+)$/;
     const accountMatch = url.match(accountPattern);
-    if (accountMatch && accountMatch[1] && !['home', 'explore', 'notifications', 'messages', 'bookmarks', 'lists'].includes(accountMatch[1])) {
+    if (
+      accountMatch &&
+      accountMatch[1] &&
+      ![
+        "home",
+        "explore",
+        "notifications",
+        "messages",
+        "bookmarks",
+        "lists",
+      ].includes(accountMatch[1])
+    ) {
       return `account:${accountMatch[1]}`;
     }
-    
+
     return null;
   };
 

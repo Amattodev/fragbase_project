@@ -229,10 +229,27 @@ app.get("/settings", async (c) => {
 // 画像をクライアントから直接ImagesにアップロードするためのURL発行
 app.get("/images/upload-token", async (c) => {
   try {
+    // 開発環境の場合はローカルアップロード用のトークンを返す
+    if (process.env.NODE_ENV === "development") {
+      return c.json({
+        ok: true,
+        uploadUrl: "/api/images/local-upload",
+        imageId: `local-${Date.now()}`,
+        isLocal: true,
+      });
+    }
+
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN;
     if (!accountId || !apiToken) {
-      return c.json({ ok: false, error: "Cloudflare設定が不正です" }, 500);
+      // 開発環境へのフォールバック
+      console.warn("Cloudflare設定が不足しています。ローカルモードで動作します。");
+      return c.json({
+        ok: true,
+        uploadUrl: "/api/images/local-upload",
+        imageId: `local-${Date.now()}`,
+        isLocal: true,
+      });
     }
 
     const response = await fetch(
@@ -255,11 +272,13 @@ app.get("/images/upload-token", async (c) => {
       ok: true,
       uploadUrl: uploadData.result.uploadURL,
       imageId: uploadData.result.id,
+      isLocal: false,
     });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
+
 
 //空白の下書きを作成
 app.post("/posts", async (c) => {
