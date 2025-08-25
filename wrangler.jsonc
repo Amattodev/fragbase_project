@@ -25,6 +25,12 @@
 			"database_id": "f17aae6e-3d7a-44e3-90e0-54375031e5ea",
 			"migrations_dir": "drizzle/migrations"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "VIDEOS_BUCKET",
+			"bucket_name": "fragbase-videos"
+		}
 	]
 	/**
 	 * Smart Placement

@@ -592,13 +592,31 @@ export default function ArticleEditPage() {
                         {children}
                       </a>
                     ),
-                    img: ({ src, alt }) => (
-                      <img
-                        src={src}
-                        alt={alt}
-                        className="max-w-full h-auto rounded-lg my-4"
-                      />
-                    ),
+                    img: ({ src, alt }) => {
+                      // 動画ファイルかどうかをチェック
+                      const isVideo = src && typeof src === 'string' && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
+                      
+                      if (isVideo) {
+                        return (
+                          <video
+                            src={src}
+                            className="max-w-full h-auto rounded-lg my-4"
+                            controls
+                            preload="metadata"
+                          >
+                            {alt && <p>{alt}</p>}
+                          </video>
+                        );
+                      }
+                      
+                      return (
+                        <img
+                          src={src}
+                          alt={alt}
+                          className="max-w-full h-auto rounded-lg my-4"
+                        />
+                      );
+                    },
                     table: ({ children }) => (
                       <div className="overflow-x-auto my-4">
                         <table className="min-w-full border border-gray-600">

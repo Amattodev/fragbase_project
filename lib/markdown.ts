@@ -17,7 +17,8 @@ function autoEmbedYouTube(html: string): string {
 }
 
 export const processVideoEmbeds = (html: string): string => {
-  return html.replace(
+  // YouTubeの埋め込み
+  html = html.replace(
     /\[youtube:([^\]]+)\]/g,
     (match, videoId) => `
           <div class="video-embed my-6">
@@ -34,6 +35,46 @@ export const processVideoEmbeds = (html: string): string => {
           </div>
         `
   );
+
+  // ローカル動画の埋め込み（video-*参照リンクを処理）
+  // まず参照リンクを収集
+  const videoRefs: { [key: string]: string } = {};
+  const refRegex = /\[video-(\d+)\]:\s*(.+)$/gm;
+  let match;
+  while ((match = refRegex.exec(html)) !== null) {
+    videoRefs[`video-${match[1]}`] = match[2].trim();
+  }
+
+  // 動画参照を実際のvideo要素に置換
+  html = html.replace(
+    /<img[^>]*alt="([^"]*)"[^>]*>\s*\[video-(\d+)\]/g,
+    (match, altText, videoNum) => {
+      const videoUrl = videoRefs[`video-${videoNum}`];
+      if (videoUrl && (videoUrl.includes('/uploads/videos/') || videoUrl.includes('.r2.dev'))) {
+        return `
+          <div class="video-embed my-6">
+            <video
+              width="100%"
+              controls
+              class="rounded-lg shadow-lg"
+              preload="metadata"
+            >
+              <source src="${videoUrl}" type="video/mp4">
+              <source src="${videoUrl}" type="video/webm">
+              <source src="${videoUrl}" type="video/ogg">
+              動画を再生するにはHTML5対応のブラウザが必要です。
+            </video>
+          </div>
+        `;
+      }
+      return match;
+    }
+  );
+
+  // 参照リンク定義を削除（表示不要）
+  html = html.replace(/\[video-\d+\]:\s*.+$/gm, '');
+
+  return html;
 };
 
 export async function markdownToHtml(markdown: string): Promise<string> {
@@ -44,7 +85,7 @@ export async function markdownToHtml(markdown: string): Promise<string> {
     .use(rehypeSanitize, {
       // 動画埋め込みを許可するようにサニタイズ設定を更新
       ...defaultSchema,
-      tagNames: [...(defaultSchema.tagNames || []), "iframe", "blockquote"],
+      tagNames: [...(defaultSchema.tagNames || []), "iframe", "blockquote", "video", "source"],
       attributes: {
         ...defaultSchema.attributes,
         iframe: [
@@ -57,6 +98,19 @@ export async function markdownToHtml(markdown: string): Promise<string> {
           "title",
           "class",
         ],
+        video: [
+          "src",
+          "width",
+          "height",
+          "controls",
+          "autoplay",
+          "loop",
+          "muted",
+          "poster",
+          "preload",
+          "class",
+        ],
+        source: ["src", "type"],
         blockquote: ["class", "cite", "data-video-id"],
         div: [...(defaultSchema.attributes?.div || []), "class"],
       },

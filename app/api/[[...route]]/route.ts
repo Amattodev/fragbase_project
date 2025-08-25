@@ -279,6 +279,53 @@ app.get("/images/upload-token", async (c) => {
   }
 });
 
+// 動画をR2にアップロードするためのURL発行
+app.get("/videos/upload-token", async (c) => {
+  try {
+    // 開発環境の場合はローカルアップロード用のトークンを返す
+    if (process.env.NODE_ENV === "development") {
+      return c.json({
+        ok: true,
+        uploadUrl: "/api/videos/local-upload",
+        videoId: `local-video-${Date.now()}`,
+        isLocal: true,
+      });
+    }
+
+    // R2の設定確認
+    const r2AccessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+    const r2SecretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
+    const r2BucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    
+    if (!r2AccessKeyId || !r2SecretAccessKey || !r2BucketName || !accountId) {
+      // 開発環境へのフォールバック
+      console.warn("R2設定が不足しています。ローカルモードで動作します。");
+      return c.json({
+        ok: true,
+        uploadUrl: "/api/videos/local-upload",
+        videoId: `local-video-${Date.now()}`,
+        isLocal: true,
+      });
+    }
+
+    // 署名付きURLの生成（AWS SDK v3を使用）
+    const videoId = `video-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const key = `videos/${videoId}`;
+    
+    // 簡易的な署名付きURL生成（本番環境では@aws-sdk/client-s3を使用推奨）
+    // ここでは開発環境と同じローカルアップロードにフォールバック
+    return c.json({
+      ok: true,
+      uploadUrl: "/api/videos/local-upload",
+      videoId: videoId,
+      isLocal: true,
+      note: "R2署名付きURL生成は別途AWS SDKのセットアップが必要です"
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: (error as Error).message }, 500);
+  }
+});
 
 //空白の下書きを作成
 app.post("/posts", async (c) => {

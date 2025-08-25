@@ -39,6 +39,8 @@ export default function EditorComponent({
 }: EditorProps) {
   const [editorContent, setEditorContent] = useState(content);
   const [imageCounter, setImageCounter] = useState(1);
+  const [videoCounter, setVideoCounter] = useState(1);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // 画像アップロード処理
   const handleImageUpload = useCallback(async () => {
@@ -135,6 +137,110 @@ export default function EditorComponent({
     };
     input.click();
   }, [editorContent, onChange, imageCounter]);
+
+  // 動画アップロード処理
+  const handleVideoUpload = useCallback(async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "video/mp4,video/webm,video/ogg,video/quicktime";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        // ファイルサイズチェック（200MB）
+        const maxSize = 200 * 1024 * 1024;
+        if (file.size > maxSize) {
+          alert(`ファイルサイズは${maxSize / 1024 / 1024}MB以下にしてください`);
+          return;
+        }
+
+        setUploadingVideo(true);
+        try {
+          // アップロードトークン取得
+          const tokenRes = await fetch("/api/videos/upload-token");
+          const tokenData = await tokenRes.json();
+
+          if (!tokenData.ok || !tokenData.uploadUrl) {
+            throw new Error("アップロードトークンの取得に失敗");
+          }
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          // 動画アップロード
+          const uploadRes = await fetch(tokenData.uploadUrl, {
+            method: "POST",
+            body: formData,
+          });
+
+          const uploadResult = await uploadRes.json();
+
+          if (!uploadResult.success || !uploadResult.result) {
+            throw new Error("動画のアップロードに失敗");
+          }
+
+          // 動画URLを取得
+          let videoUrl: string;
+          if (tokenData.isLocal) {
+            // ローカル環境
+            videoUrl = uploadResult.result.url;
+          } else {
+            // 本番環境（R2）
+            const r2PublicUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
+            videoUrl = r2PublicUrl 
+              ? `${r2PublicUrl}/videos/${uploadResult.result.id}`
+              : uploadResult.result.url;
+          }
+
+          // 現在のコンテンツから既存の動画参照番号を取得
+          const existingRefs = editorContent.match(/\[video-(\d+)\]:/g) || [];
+          const maxRef = existingRefs.reduce((max, ref) => {
+            const num = parseInt(ref.match(/\d+/)?.[0] || "0");
+            return Math.max(max, num);
+          }, 0);
+          const currentVideoNum = maxRef + 1;
+
+          // 参照リンク形式でMarkdownを生成
+          const videoRefName = `video-${currentVideoNum}`;
+          const videoText = `![${file.name}][${videoRefName}]`;
+
+          // コンテンツの末尾に参照リンクを追加
+          let newContent = editorContent;
+
+          // 既存の参照リンクセクションを探す
+          const refSectionMatch = newContent.match(/\n\n\[(video|image)-\d+\]:.*/g);
+          if (refSectionMatch) {
+            // 既存の参照リンクセクションの最後に追加
+            const lastRefIndex = newContent.lastIndexOf(refSectionMatch[refSectionMatch.length - 1]);
+            const endOfLastRef = lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
+            newContent = 
+              newContent.slice(0, endOfLastRef) + 
+              `\n[${videoRefName}]: ${videoUrl}` + 
+              newContent.slice(endOfLastRef);
+
+            // 動画タグを適切な位置に挿入
+            const insertPos = newContent.lastIndexOf('\n\n[');
+            newContent = 
+              newContent.slice(0, insertPos) + 
+              "\n\n" + videoText + 
+              newContent.slice(insertPos);
+          } else {
+            // 参照リンクセクションがない場合は新規作成
+            newContent = editorContent + "\n\n" + videoText + "\n\n[" + videoRefName + "]: " + videoUrl;
+          }
+
+          setEditorContent(newContent);
+          onChange(newContent);
+          setVideoCounter(currentVideoNum + 1);
+        } catch (error) {
+          console.error("動画アップロードエラー:", error);
+          alert("動画のアップロードに失敗しました");
+        } finally {
+          setUploadingVideo(false);
+        }
+      }
+    };
+    input.click();
+  }, [editorContent, onChange, videoCounter]);
 
   const extractYoutubeId = (url: string): string | null => {
     // 通常の動画
@@ -354,6 +460,15 @@ export default function EditorComponent({
           className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
         >
           📷 画像を挿入
+        </Button>
+        <Button
+          onClick={handleVideoUpload}
+          variant="outline"
+          size="sm"
+          disabled={uploadingVideo}
+          className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B] disabled:opacity-50"
+        >
+          {uploadingVideo ? "アップロード中..." : "📹 動画を挿入"}
         </Button>
         <Button
           onClick={() => handleVideoEmbed("youtube")}
