@@ -23,7 +23,6 @@ import { getFpsExperienceLabel } from "@/constants/fpsExperience";
 import { getDpiLabel } from "@/constants/dpi";
 import { getDeviceLabel } from "@/constants/device";
 import { Tag } from "lucide-react";
-import { debug } from "console";
 
 const app = new Hono().basePath("/api");
 
@@ -31,8 +30,6 @@ type Setting = InferSelectModel<typeof settings>;
 type Comment = InferSelectModel<typeof comments>;
 type Tag = InferSelectModel<typeof tags>;
 type GameCategory = InferSelectModel<typeof gameCategories>;
-type PostComment = InferSelectModel<typeof postComments>;
-type PostCommentLike = InferSelectModel<typeof postCommentLikes>;
 
 type GameSpecificSettings = {
   sensitivity?: number;
@@ -43,14 +40,6 @@ type GameSpecificSettings = {
   aimAssist?: string;
   [key: string]: any;
 };
-
-interface CommentWithMetadata extends PostComment {
-  likesCount: number;
-  isLiked?: boolean;
-  repliesCount: number;
-  author: string;
-  createdAt: string;
-}
 
 // 日本語ラベルを英語キーにマッピングする
 const mapLabelToKey = (game: string, label: string): string => {
@@ -228,22 +217,26 @@ app.get("/settings", async (c) => {
 
 // 画像をクライアントから直接ImagesにアップロードするためのURL発行
 app.get("/images/upload-token", async (c) => {
+  console.log("画像アップロードトークン要求を受信");
   try {
-    // 開発環境の場合はローカルアップロード用のトークンを返す
-    if (process.env.NODE_ENV === "development") {
-      return c.json({
-        ok: true,
-        uploadUrl: "/api/images/local-upload",
-        imageId: `local-${Date.now()}`,
-        isLocal: true,
-      });
-    }
-
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-    if (!accountId || !apiToken) {
-      // 開発環境へのフォールバック
-      console.warn("Cloudflare設定が不足しています。ローカルモードで動作します。");
+    const apiToken = process.env.CLOUDFLARE_IMAGES_API_TOKEN;
+    const nodeEnv = process.env.NODE_ENV;
+
+    console.log(
+      `NODE_ENV: ${nodeEnv}, CLOUDFLARE_ACCOUNT_ID: ${
+        accountId ? "set" : "not set"
+      }, CLOUDFLARE_IMAGES_API_TOKEN: ${apiToken ? "set" : "not set"}`
+    );
+
+    // 開発環境またはCloudflare設定が不足している場合はローカルアップロードを使用
+    if (nodeEnv === "development" || !accountId || !apiToken) {
+      if (!accountId || !apiToken) {
+        console.warn(
+          "Cloudflare設定が不足しています。ローカルモードで動作します。"
+        );
+      }
+      console.log("ローカルモードでトークンを返します");
       return c.json({
         ok: true,
         uploadUrl: "/api/images/local-upload",
@@ -252,6 +245,7 @@ app.get("/images/upload-token", async (c) => {
       });
     }
 
+    console.log("Cloudflare API を呼び出します");
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`,
       {
@@ -263,8 +257,15 @@ app.get("/images/upload-token", async (c) => {
       }
     );
 
-    const uploadData = await response.json();
+    console.log(`Cloudflare API レスポンスステータス: ${response.status}`);
+    const uploadData = (await response.json()) as {
+      success: boolean;
+      result: { uploadURL: string; id: string };
+    };
+    console.log("Cloudflare API レスポンス:", JSON.stringify(uploadData));
+
     if (!uploadData.success) {
+      console.error("Cloudflare API が失敗:", uploadData);
       return c.json({ ok: false, error: "アップロードURL取得に失敗" }, 500);
     }
 
@@ -275,32 +276,44 @@ app.get("/images/upload-token", async (c) => {
       isLocal: false,
     });
   } catch (error) {
+    console.error("画像アップロードトークン取得エラー:", error);
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
 
 // 動画をR2にアップロードするためのURL発行
 app.get("/videos/upload-token", async (c) => {
+  console.log("動画アップロードトークン要求を受信");
   try {
-    // 開発環境の場合はローカルアップロード用のトークンを返す
-    if (process.env.NODE_ENV === "development") {
-      return c.json({
-        ok: true,
-        uploadUrl: "/api/videos/local-upload",
-        videoId: `local-video-${Date.now()}`,
-        isLocal: true,
-      });
-    }
-
     // R2の設定確認
     const r2AccessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
     const r2SecretAccessKey = process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
     const r2BucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    
-    if (!r2AccessKeyId || !r2SecretAccessKey || !r2BucketName || !accountId) {
-      // 開発環境へのフォールバック
-      console.warn("R2設定が不足しています。ローカルモードで動作します。");
+    const nodeEnv = process.env.NODE_ENV;
+
+    console.log(
+      `NODE_ENV: ${nodeEnv}, R2_ACCESS_KEY_ID: ${
+        r2AccessKeyId ? "set" : "not set"
+      }, R2_SECRET_ACCESS_KEY: ${
+        r2SecretAccessKey ? "set" : "not set"
+      }, R2_BUCKET_NAME: ${
+        r2BucketName ? "set" : "not set"
+      }, CLOUDFLARE_ACCOUNT_ID: ${accountId ? "set" : "not set"}`
+    );
+
+    // 開発環境またはR2設定が不足している場合はローカルアップロードを使用
+    if (
+      nodeEnv === "development" ||
+      !r2AccessKeyId ||
+      !r2SecretAccessKey ||
+      !r2BucketName ||
+      !accountId
+    ) {
+      if (!r2AccessKeyId || !r2SecretAccessKey || !r2BucketName || !accountId) {
+        console.warn("R2設定が不足しています。ローカルモードで動作します。");
+      }
+      console.log("ローカルモードで動画トークンを返します");
       return c.json({
         ok: true,
         uploadUrl: "/api/videos/local-upload",
@@ -310,19 +323,22 @@ app.get("/videos/upload-token", async (c) => {
     }
 
     // 署名付きURLの生成（AWS SDK v3を使用）
-    const videoId = `video-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    const key = `videos/${videoId}`;
-    
+    const videoId = `video-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}`;
+    // const key = `videos/${videoId}`; // 未使用のため削除
+
     // 簡易的な署名付きURL生成（本番環境では@aws-sdk/client-s3を使用推奨）
     // ここでは開発環境と同じローカルアップロードにフォールバック
     return c.json({
       ok: true,
-      uploadUrl: "/api/videos/local-upload",
+      uploadUrl: "/api/videos/upload",
       videoId: videoId,
       isLocal: true,
-      note: "R2署名付きURL生成は別途AWS SDKのセットアップが必要です"
+      note: "R2署名付きURL生成は別途AWS SDKのセットアップが必要です",
     });
   } catch (error) {
+    console.error("動画アップロードトークン取得エラー:", error);
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });

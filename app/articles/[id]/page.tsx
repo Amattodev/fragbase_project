@@ -49,7 +49,7 @@ export default function ArticlePage() {
 
             // いいね取得
             const likesRes = await fetch(`/api/posts/${articleId}/likes/count`);
-            const likesData = await likesRes.json();
+            const likesData = await likesRes.json() as { ok: boolean; likesCount: number };
             if (likesData.ok) {
               setLikesCount(likesData.likesCount);
             }
@@ -547,8 +547,9 @@ export default function ArticlePage() {
                   {children}
                 </blockquote>
               ),
-              code: ({ inline, children }) =>
-                inline ? (
+              code: ({ children, ...props }) => {
+                const isInline = props.className?.includes('inline') || !props.className?.includes('language-');
+                return isInline ? (
                   <code className="bg-[#2B2B2B] text-[#7DB7E8] px-1 py-0.5 rounded text-sm">
                     {children}
                   </code>
@@ -556,7 +557,8 @@ export default function ArticlePage() {
                   <code className="block bg-[#2B2B2B] text-[#F5F5F5] p-3 rounded-lg overflow-x-auto">
                     {children}
                   </code>
-                ),
+                );
+              },
               pre: ({ children }) => (
                 <pre className="bg-[#2B2B2B] p-4 rounded-lg overflow-x-auto mb-4">
                   {children}
@@ -573,19 +575,50 @@ export default function ArticlePage() {
                 </a>
               ),
               img: ({ src, alt }) => {
-                // 動画ファイルかどうかをチェック
-                const isVideo = src && typeof src === 'string' && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
+                // 動画ファイルかどうかをチェック（より包括的）
+                const isVideo = src && typeof src === 'string' && (
+                  /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src) || // 拡張子チェック
+                  src.includes('/videos/') || // パスチェック
+                  /video/i.test(alt || '') // alt属性チェック
+                );
+                
                 
                 if (isVideo) {
                   return (
-                    <video
-                      src={src}
-                      className="max-w-full h-auto rounded-lg my-4"
-                      controls
-                      preload="metadata"
-                    >
-                      {alt && <p>{alt}</p>}
-                    </video>
+                    <div className="my-4">
+                      <video
+                        src={src}
+                        className="max-w-full h-auto rounded-lg"
+                        controls
+                        preload="metadata"
+                        playsInline
+                        muted={false}
+                        onError={(e) => {
+                          console.error('動画読み込みエラー:', e);
+                          console.error('動画URL:', src);
+                          const video = e.target as HTMLVideoElement;
+                          console.error('ネットワーク状態:', video.networkState);
+                          console.error('エラーコード:', video.error?.code);
+                          console.error('エラーメッセージ:', video.error?.message);
+                          
+                          // エラー時にフォールバック表示
+                          video.style.display = 'none';
+                          const errorDiv = document.createElement('div');
+                          errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded';
+                          errorDiv.innerHTML = `
+                            <p><strong>動画読み込みエラー</strong></p>
+                            <p>動画ファイルが見つかりません。</p>
+                            <p class="text-sm mt-2">URL: ${src}</p>
+                          `;
+                          video.parentNode?.insertBefore(errorDiv, video);
+                        }}
+                        onLoadStart={() => console.log('動画読み込み開始:', src)}
+                        onCanPlay={() => console.log('動画再生可能:', src)}
+                      >
+                        <p>お使いのブラウザは動画タグをサポートしていません。</p>
+                        {alt && <p>{alt}</p>}
+                      </video>
+                    </div>
                   );
                 }
                 

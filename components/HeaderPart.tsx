@@ -16,8 +16,12 @@ export default function Header() {
         method: "POST",
       });
 
-      const result = await response.json();
-      if (result.ok) {
+      const result = await response.json() as { 
+        ok: boolean; 
+        post?: { id: string }; 
+        error?: string 
+      };
+      if (result.ok && result.post) {
         // 作成成功時は新規記事ページへリダイレクト
         window.location.href = `/articles/${result.post.id}/edit`;
       } else {

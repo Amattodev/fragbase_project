@@ -65,7 +65,7 @@ function CommentItem({
         }
       );
 
-      const data = await res.json();
+      const data = await res.json() as { ok: boolean; liked: boolean };
       if (data.ok) {
         setIsLiked(data.liked);
         setLikesCount((prev) => (data.liked ? prev + 1 : prev - 1));
@@ -86,7 +86,7 @@ function CommentItem({
       const res = await fetch(
         `/api/posts/${postId}/comments/${comment.id}/replies?userIdentifier=${userIdentifier}`
       );
-      const data = await res.json();
+      const data = await res.json() as { ok: boolean; replies: Comment[] };
 
       if (data.ok) {
         setReplies(data.replies);
@@ -135,7 +135,7 @@ function CommentItem({
           {/* 返信ボタン */}
           {depth === 0 && (
             <button
-              onClick={() => onReply(comment.id)}
+              onClick={() => onReply?.(comment.id)}
               className="flex items-center gap-1 text-gray-400 hover:text-gray-300"
             >
               <MessageCircle size={16} />
@@ -209,8 +209,11 @@ export default function CommentSection({ postId }: CommentSectionProps) {
   };
 
   useEffect(() => {
-    fetchComments();
-    fetchCommentsCount();
+    const initialize = async () => {
+      await fetchComments();
+      await fetchCommentsCount();
+    };
+    initialize();
   }, [postId]);
 
   const fetchComments = async (loadMore = false) => {
@@ -221,7 +224,11 @@ export default function CommentSection({ postId }: CommentSectionProps) {
         `/api/posts/${postId}/comments?limit=20&offset=${currentOffset}&userIdentifier=${userIdentifier}`
       );
 
-      const data = await res.json();
+      const data = await res.json() as { 
+        ok: boolean; 
+        comments: Comment[]; 
+        pagination: { hasMore: boolean } 
+      };
 
       if (data.ok) {
         if (loadMore) {
@@ -242,7 +249,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
   const fetchCommentsCount = async () => {
     try {
       const res = await fetch(`/api/posts/${postId}/comments/count`);
-      const data = await res.json();
+      const data = await res.json() as { ok: boolean; commentsCount: number };
       if (data.ok) {
         setCommentsCount(data.commentsCount);
       }
@@ -268,7 +275,7 @@ export default function CommentSection({ postId }: CommentSectionProps) {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json() as { ok: boolean; comment?: Comment; error?: string };
       if (data.ok) {
         if (replyingTo) {
           // 返信の場合は全体をリフレッシュ
@@ -276,7 +283,9 @@ export default function CommentSection({ postId }: CommentSectionProps) {
           fetchCommentsCount();
         } else {
           // 新規コメントの場合は先頭に追加
-          setComments([data.comment, ...comments]);
+          if (data.comment) {
+            setComments([data.comment, ...comments]);
+          }
           setCommentsCount(commentsCount + 1);
         }
         setContent("");

@@ -48,9 +48,9 @@ export default function ArticleEditPage() {
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [tagSuggestions, setTagSuggestions] = useState<any[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<{id: number; name: string}[]>([]);
   const [gameCategories, setGameCategories] = useState<string[]>([]);
-  const [availableGameCategories, setAvailableGameCategories] = useState<any[]>(
+  const [availableGameCategories, setAvailableGameCategories] = useState<{id: number; name: string; displayName: string}[]>(
     []
   );
   const [status, setStatus] = useState<"draft" | "published">("draft");
@@ -76,7 +76,7 @@ export default function ArticleEditPage() {
           setOriginalContent({
             title: data.post.title,
             content: data.post.content,
-            status: data.post.status,
+            status: data.post.status as "published" | "draft",
             tags: data.post.tags?.map((tag) => tag.name) || [],
             gameCategories:
               data.post.gameCategories?.map((gc) => gc.name) || [],
@@ -104,9 +104,12 @@ export default function ArticleEditPage() {
     const fetchGameCategories = async () => {
       try {
         const res = await fetch("/api/game-categories");
-        const data = await res.json();
+        const data = await res.json() as { ok: boolean; gameCategories: {id: number; name: string}[] };
         if (data.ok) {
-          setAvailableGameCategories(data.gameCategories);
+          setAvailableGameCategories(data.gameCategories.map(gc => ({
+            ...gc,
+            displayName: gc.name
+          })));
         }
       } catch (error) {
         console.error("ゲームカテゴリ取得エラー:", error);
@@ -176,7 +179,7 @@ export default function ArticleEditPage() {
     if (value.trim().length > 0) {
       try {
         const res = await fetch(`/api/tags?q=${encodeURIComponent(value)}`);
-        const data = await res.json();
+        const data = await res.json() as { ok: boolean; tags: {id: number; name: string}[] };
         if (data.ok) {
           setTagSuggestions(data.tags);
         }
@@ -235,7 +238,7 @@ export default function ArticleEditPage() {
     } finally {
       setSaving(false);
     }
-  }, [post, title, content, tags, saving]);
+  }, [post, title, content, tags, gameCategories, status, saving]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -253,7 +256,7 @@ export default function ArticleEditPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = "未保存の変更があります。本当にページを離れますか？";
+        e.returnValue = "";
       }
     };
 
@@ -276,7 +279,7 @@ export default function ArticleEditPage() {
         method: "DELETE",
       });
 
-      const data = await res.json();
+      const data = await res.json() as { ok: boolean; error?: string };
       if (data.ok) {
         console.log("記事が削除されました");
         router.push("/");
@@ -326,7 +329,7 @@ export default function ArticleEditPage() {
             height="315"
             src={`https://www.youtube.com/embed/${videoId}`}
             title="YouTube video player"
-            frameBorder="0"
+            style={{ border: 0 }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="rounded-lg shadow-lg"
@@ -456,7 +459,7 @@ export default function ArticleEditPage() {
                   <Input
                     value={tagInput}
                     onChange={(e) => handleTagInputChange(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         handleTagAdd(tagInput);
@@ -567,8 +570,9 @@ export default function ArticleEditPage() {
                         {children}
                       </blockquote>
                     ),
-                    code: ({ inline, children }) =>
-                      inline ? (
+                    code: ({ children, ...props }) => {
+                      const isInline = props.className?.includes('inline') || !props.className?.includes('language-');
+                      return isInline ? (
                         <code className="bg-[#1F1F1F] text-[#7DB7E8] px-1 py-0.5 rounded text-sm">
                           {children}
                         </code>
@@ -576,7 +580,8 @@ export default function ArticleEditPage() {
                         <code className="block bg-[#1F1F1F] text-[#F5F5F5] p-3 rounded-lg overflow-x-auto">
                           {children}
                         </code>
-                      ),
+                      );
+                    },
                     pre: ({ children }) => (
                       <pre className="bg-[#1F1F1F] p-4 rounded-lg overflow-x-auto mb-4">
                         {children}
