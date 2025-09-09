@@ -13,11 +13,13 @@ import {
   postLikes,
   postComments,
   postCommentLikes,
+  users,
 } from "@/db/schema";
 import { getDatabase } from "@/lib/db";
 import { markdownToHtml } from "@/lib/markdown";
 import { toSlug, normalizeTitle } from "@/lib/slug";
 import { handle } from "hono/vercel";
+import { getToken } from "next-auth/jwt";
 import { getRoleLabel } from "@/constants/role";
 import { getFpsExperienceLabel } from "@/constants/fpsExperience";
 import { getDpiLabel } from "@/constants/dpi";
@@ -346,6 +348,23 @@ app.get("/videos/upload-token", async (c) => {
 //空白の下書きを作成
 app.post("/posts", async (c) => {
   try {
+    // 認証チェック（HonoのContextから）
+    const req = c.req.raw;
+    const token = await getToken({ 
+      req: req,
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+    
+    if (!token?.sub) {
+      return c.json(
+        {
+          ok: false,
+          error: "ログインが必要です",
+        },
+        401
+      );
+    }
+
     const db = getDatabase();
 
     const initialTitle = "無題の記事";
@@ -363,6 +382,7 @@ app.post("/posts", async (c) => {
         contentHtml,
         norm,
         status: "draft",
+        userId: token.sub, // ユーザーIDを追加
       })
       .returning();
 
@@ -613,6 +633,19 @@ app.get("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
+    // ユーザー情報を取得
+    let user = null;
+    if (post.userId) {
+      const userResult = await db.select().from(users).where(eq(users.id, post.userId)).get();
+      if (userResult) {
+        user = {
+          id: userResult.id,
+          name: userResult.name,
+          image: userResult.image,
+        };
+      }
+    }
+
     //タグ取得
     const postTagRelations = await db
       .select()
@@ -651,6 +684,7 @@ app.get("/posts/:id", async (c) => {
       ok: true,
       post: {
         ...post,
+        user: user,
         tags: postTagsResult,
         gameCategories: postGameCategoriesResult,
       },
@@ -710,6 +744,18 @@ app.get("/posts", async (c) => {
 
     const postWithMetadata = await Promise.all(
       actualData.map(async (post) => {
+        // ユーザー情報を取得
+        let user = null;
+        if (post.userId) {
+          const userResult = await db.select().from(users).where(eq(users.id, post.userId)).get();
+          if (userResult) {
+            user = {
+              id: userResult.id,
+              name: userResult.name,
+              image: userResult.image,
+            };
+          }
+        }
         const postTagRelations = await db
           .select()
           .from(postTags)
@@ -743,6 +789,7 @@ app.get("/posts", async (c) => {
         }
         return {
           ...post,
+          user: user,
           tags: postTagsResult,
           gameCategories: postGameCategoriesResult,
           excerpt:

@@ -6,6 +6,7 @@ import CommentSection from "@/components/CommentsSection";
 import { Heart } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Image from "next/image";
 
 interface Post {
   id: number;
@@ -16,6 +17,11 @@ interface Post {
   updatedAt: number;
   tags: { id: number; name: string; norm: string }[];
   gameCategories: { id: number; name: string; displayName: string }[];
+  user?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
 }
 
 interface ApiResponse {
@@ -465,6 +471,28 @@ export default function ArticlePage() {
                   {category.displayName}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* ユーザー情報 */}
+          {post.user && (
+            <div className="flex items-center gap-3 mb-4">
+              {post.user.image ? (
+                <Image
+                  src={post.user.image}
+                  alt={post.user.name || "ユーザー"}
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                  <span className="text-sm text-gray-300">👤</span>
+                </div>
+              )}
+              <span className="text-gray-300">
+                投稿者: <span className="text-[#F5F5F5] font-medium">{post.user.name || "匿名ユーザー"}</span>
+              </span>
             </div>
           )}
 

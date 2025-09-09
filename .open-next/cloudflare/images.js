@@ -1,5 +1,5 @@
 var define_IMAGES_LOCAL_PATTERNS_default = [];
-var define_IMAGES_REMOTE_PATTERNS_default = [];
+var define_IMAGES_REMOTE_PATTERNS_default = [{ protocol: "https", hostname: "^(?:^(?:lh3\\.googleusercontent\\.com)$)$", port: "", pathname: "^(?:\\/(?!\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?))$" }, { protocol: "https", hostname: "^(?:^(?:cdn\\.discordapp\\.com)$)$", port: "", pathname: "^(?:\\/(?!\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?))$" }, { protocol: "https", hostname: "^(?:^(?:static\\-cdn\\.jtvnw\\.net)$)$", port: "", pathname: "^(?:\\/(?!\\.{1,2}(?:\\/|$))(?:(?:(?!(?:^|\\/)\\.{1,2}(?:\\/|$)).)*?))$" }];
 function fetchImage(fetcher, imageUrl) {
   if (!imageUrl || imageUrl.length > 3072 || imageUrl.startsWith("//")) {
     return getUrlErrorResponse();
