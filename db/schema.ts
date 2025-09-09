@@ -6,6 +6,69 @@ import {
   index,
 } from "drizzle-orm/sqlite-core";
 
+// NextAuth.js用テーブル
+export const users = sqliteTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  email: text("email").unique(),
+  emailVerified: integer("emailVerified", { mode: "timestamp" }),
+  image: text("image"),
+});
+
+export const accounts = sqliteTable("account", {
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  provider: text("provider").notNull(),
+  providerAccountId: text("providerAccountId").notNull(),
+  refresh_token: text("refresh_token"),
+  access_token: text("access_token"),
+  expires_at: integer("expires_at"),
+  token_type: text("token_type"),
+  scope: text("scope"),
+  id_token: text("id_token"),
+  session_state: text("session_state"),
+}, (account) => ({
+  compoundKey: uniqueIndex("account_provider_providerAccountId_unique").on(
+    account.provider,
+    account.providerAccountId
+  ),
+}));
+
+export const sessions = sqliteTable("session", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: integer("expires", { mode: "timestamp" }).notNull(),
+});
+
+export const verificationTokens = sqliteTable("verificationToken", {
+  identifier: text("identifier").notNull(),
+  token: text("token").notNull(),
+  expires: integer("expires", { mode: "timestamp" }).notNull(),
+}, (vt) => ({
+  compoundKey: uniqueIndex("verificationToken_identifier_token_unique").on(
+    vt.identifier,
+    vt.token
+  ),
+}));
+
+// ユーザープロフィール拡張テーブル
+export const userProfiles = sqliteTable("user_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" })
+    .unique(),
+  bio: text("bio"),
+  socialLinks: text("social_links"), // JSON形式
+  customFields: text("custom_fields"), // JSON形式（将来の拡張用）
+  createdAt: integer("created_at").default(Date.now()),
+  updatedAt: integer("updated_at").default(Date.now()),
+});
+
 export const posts = sqliteTable("posts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   slug: text("slug").notNull().unique(),
@@ -14,6 +77,7 @@ export const posts = sqliteTable("posts", {
   contentHtml: text("content_html").notNull(),
   norm: text("norm").notNull(),
   status: text("status").notNull().default("draft"),
+  userId: text("user_id").references(() => users.id), // 認証連携
   createdAt: integer("created_at").default(Date.now()),
   updatedAt: integer("updated_at").default(Date.now()),
 });

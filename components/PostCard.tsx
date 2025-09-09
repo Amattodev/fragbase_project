@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Post {
   id: number;
@@ -8,6 +9,11 @@ interface Post {
   createdAt: number;
   tags: { id: number; name: string; norm: string }[];
   gameCategories: { id: number; name: string; displayName: string }[];
+  user?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
 }
 
 interface PostCardProps {
@@ -34,6 +40,28 @@ export default function PostCard({ post }: PostCardProps) {
                 +{post.gameCategories.length - 2}個
               </span>
             )}
+          </div>
+        )}
+
+        {/* ユーザー情報 */}
+        {post.user && (
+          <div className="flex items-center gap-2 mb-3">
+            {post.user.image ? (
+              <Image
+                src={post.user.image}
+                alt={post.user.name || "ユーザー"}
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center">
+                <span className="text-xs text-gray-300">👤</span>
+              </div>
+            )}
+            <span className="text-sm text-gray-300">
+              {post.user.name || "匿名ユーザー"}
+            </span>
           </div>
         )}
 

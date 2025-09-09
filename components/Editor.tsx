@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { extractHeadings } from "@/lib/markdown";
 
 // 動的インポートでMDEditorを読み込み（SSR回避）
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
@@ -38,8 +37,6 @@ export default function EditorComponent({
   hasUnsavedChanges = false,
 }: EditorProps) {
   const [editorContent, setEditorContent] = useState(content);
-  const [imageCounter, setImageCounter] = useState(1);
-  const [videoCounter, setVideoCounter] = useState(1);
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
   // 画像アップロード処理
@@ -83,12 +80,14 @@ export default function EditorComponent({
             const accountHash = process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_HASH;
             if (!accountHash) {
               // アカウントハッシュがない場合はローカル画像として扱う
-              imageUrl = uploadResult.result.variants?.[0] || `/images/${uploadResult.result.id}`;
+              imageUrl =
+                uploadResult.result.variants?.[0] ||
+                `/images/${uploadResult.result.id}`;
             } else {
               imageUrl = `https://imagedelivery.net/${accountHash}/${uploadResult.result.id}/public`;
             }
           }
-          
+
           // 現在のコンテンツから既存の画像参照番号を取得
           const existingRefs = editorContent.match(/\[image-(\d+)\]:/g) || [];
           const maxRef = existingRefs.reduce((max, ref) => {
@@ -96,39 +95,49 @@ export default function EditorComponent({
             return Math.max(max, num);
           }, 0);
           const currentImageNum = maxRef + 1;
-          
+
           // 参照リンク形式でMarkdownを生成
           const imageRefName = `image-${currentImageNum}`;
           const imageText = `![${file.name}][${imageRefName}]`;
-          
+
           // コンテンツの末尾に参照リンクを追加（既存の参照リンクがある場合はその後に追加）
           let newContent = editorContent;
-          
+
           // 既存の参照リンクセクションを探す
           const refSectionMatch = newContent.match(/\n\n\[image-\d+\]:.*/g);
           if (refSectionMatch) {
             // 既存の参照リンクセクションの最後に追加
-            const lastRefIndex = newContent.lastIndexOf(refSectionMatch[refSectionMatch.length - 1]);
-            const endOfLastRef = lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
-            newContent = 
-              newContent.slice(0, endOfLastRef) + 
-              `\n[${imageRefName}]: ${imageUrl}` + 
+            const lastRefIndex = newContent.lastIndexOf(
+              refSectionMatch[refSectionMatch.length - 1]
+            );
+            const endOfLastRef =
+              lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
+            newContent =
+              newContent.slice(0, endOfLastRef) +
+              `\n[${imageRefName}]: ${imageUrl}` +
               newContent.slice(endOfLastRef);
-            
+
             // 画像タグを適切な位置に挿入（カーソル位置または末尾）
-            const insertPos = newContent.lastIndexOf('\n\n[image-');
-            newContent = 
-              newContent.slice(0, insertPos) + 
-              "\n\n" + imageText + 
+            const insertPos = newContent.lastIndexOf("\n\n[image-");
+            newContent =
+              newContent.slice(0, insertPos) +
+              "\n\n" +
+              imageText +
               newContent.slice(insertPos);
           } else {
             // 参照リンクセクションがない場合は新規作成
-            newContent = editorContent + "\n\n" + imageText + "\n\n[" + imageRefName + "]: " + imageUrl;
+            newContent =
+              editorContent +
+              "\n\n" +
+              imageText +
+              "\n\n[" +
+              imageRefName +
+              "]: " +
+              imageUrl;
           }
-          
+
           setEditorContent(newContent);
           onChange(newContent);
-          setImageCounter(currentImageNum + 1);
         } catch (error) {
           console.error("画像アップロードエラー:", error);
           alert("画像のアップロードに失敗しました");
@@ -136,7 +145,7 @@ export default function EditorComponent({
       }
     };
     input.click();
-  }, [editorContent, onChange, imageCounter]);
+  }, [editorContent, onChange]);
 
   // 動画アップロード処理
   const handleVideoUpload = useCallback(async () => {
@@ -157,7 +166,11 @@ export default function EditorComponent({
         try {
           // アップロードトークン取得
           const tokenRes = await fetch("/api/videos/upload-token");
-          const tokenData = await tokenRes.json();
+          const tokenData = (await tokenRes.json()) as {
+            ok: boolean;
+            uploadUrl?: string;
+            isLocal?: boolean;
+          };
 
           if (!tokenData.ok || !tokenData.uploadUrl) {
             throw new Error("アップロードトークンの取得に失敗");
@@ -172,24 +185,18 @@ export default function EditorComponent({
             body: formData,
           });
 
-          const uploadResult = await uploadRes.json();
+          const uploadResult = (await uploadRes.json()) as {
+            success: boolean;
+            result?: { url: string; id: string };
+          };
 
           if (!uploadResult.success || !uploadResult.result) {
             throw new Error("動画のアップロードに失敗");
           }
 
-          // 動画URLを取得
-          let videoUrl: string;
-          if (tokenData.isLocal) {
-            // ローカル環境
-            videoUrl = uploadResult.result.url;
-          } else {
-            // 本番環境（R2）
-            const r2PublicUrl = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
-            videoUrl = r2PublicUrl 
-              ? `${r2PublicUrl}/videos/${uploadResult.result.id}`
-              : uploadResult.result.url;
-          }
+          // 動画URLを取得（サーバーから返されるURLをそのまま使用）
+          console.log("動画アップロード結果URL:", uploadResult.result.url);
+          const videoUrl = uploadResult.result.url;
 
           // 現在のコンテンツから既存の動画参照番号を取得
           const existingRefs = editorContent.match(/\[video-(\d+)\]:/g) || [];
@@ -207,30 +214,42 @@ export default function EditorComponent({
           let newContent = editorContent;
 
           // 既存の参照リンクセクションを探す
-          const refSectionMatch = newContent.match(/\n\n\[(video|image)-\d+\]:.*/g);
+          const refSectionMatch = newContent.match(
+            /\n\n\[(video|image)-\d+\]:.*/g
+          );
           if (refSectionMatch) {
             // 既存の参照リンクセクションの最後に追加
-            const lastRefIndex = newContent.lastIndexOf(refSectionMatch[refSectionMatch.length - 1]);
-            const endOfLastRef = lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
-            newContent = 
-              newContent.slice(0, endOfLastRef) + 
-              `\n[${videoRefName}]: ${videoUrl}` + 
+            const lastRefIndex = newContent.lastIndexOf(
+              refSectionMatch[refSectionMatch.length - 1]
+            );
+            const endOfLastRef =
+              lastRefIndex + refSectionMatch[refSectionMatch.length - 1].length;
+            newContent =
+              newContent.slice(0, endOfLastRef) +
+              `\n[${videoRefName}]: ${videoUrl}` +
               newContent.slice(endOfLastRef);
 
             // 動画タグを適切な位置に挿入
-            const insertPos = newContent.lastIndexOf('\n\n[');
-            newContent = 
-              newContent.slice(0, insertPos) + 
-              "\n\n" + videoText + 
+            const insertPos = newContent.lastIndexOf("\n\n[");
+            newContent =
+              newContent.slice(0, insertPos) +
+              "\n\n" +
+              videoText +
               newContent.slice(insertPos);
           } else {
             // 参照リンクセクションがない場合は新規作成
-            newContent = editorContent + "\n\n" + videoText + "\n\n[" + videoRefName + "]: " + videoUrl;
+            newContent =
+              editorContent +
+              "\n\n" +
+              videoText +
+              "\n\n[" +
+              videoRefName +
+              "]: " +
+              videoUrl;
           }
 
           setEditorContent(newContent);
           onChange(newContent);
-          setVideoCounter(currentVideoNum + 1);
         } catch (error) {
           console.error("動画アップロードエラー:", error);
           alert("動画のアップロードに失敗しました");
@@ -240,7 +259,7 @@ export default function EditorComponent({
       }
     };
     input.click();
-  }, [editorContent, onChange, videoCounter]);
+  }, [editorContent, onChange]);
 
   const extractYoutubeId = (url: string): string | null => {
     // 通常の動画
