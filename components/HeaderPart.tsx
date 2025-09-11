@@ -13,6 +13,19 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Debug: useSession 状態を常に観測
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[AuthDebug] useSession status:", status);
+      console.log("[AuthDebug] useSession session:", session);
+      // API の生値と差がないかも確認
+      fetch("/api/auth/session")
+        .then((r) => r.json())
+        .then((json) => console.log("[AuthDebug] /api/auth/session:", json))
+        .catch((e) => console.log("[AuthDebug] session fetch error:", e));
+    }
+  }, [status, session]);
+
   // ドロップダウンの外部クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

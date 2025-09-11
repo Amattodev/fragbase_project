@@ -367,6 +367,8 @@ app.post("/posts", async (c) => {
 
     const db = getDatabase();
 
+    // DrizzleAdapter にユーザー作成/リンクは委ねる（手動での upsert は行わない）
+
     const initialTitle = "無題の記事";
     const initialContent = "";
     const slug = toSlug(initialTitle);

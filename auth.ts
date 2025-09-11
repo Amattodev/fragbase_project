@@ -1,11 +1,16 @@
 import NextAuth from "next-auth"
-// import { DrizzleAdapter } from "@auth/drizzle-adapter"
-// import { getDatabase } from "@/lib/db"
+import { DrizzleAdapter } from "@auth/drizzle-adapter"
+import { getDatabase } from "@/lib/db"
+import { users, accounts, sessions, verificationTokens } from "@/db/schema"
 import { authConfig } from "./auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Cloudflare環境でのビルドエラーを回避するため一時的にアダプターを無効化
-  // adapter: DrizzleAdapter(getDatabase()),
+  adapter: DrizzleAdapter(getDatabase(), {
+    users,
+    accounts,
+    sessions,
+    verificationTokens,
+  }),
   session: { strategy: "jwt" },
   ...authConfig,
 })
