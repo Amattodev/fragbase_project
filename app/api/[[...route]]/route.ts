@@ -372,6 +372,7 @@ app.post("/posts", async (c) => {
     const slug = toSlug(initialTitle);
     const norm = normalizeTitle(initialTitle);
     const contentHtml = await markdownToHtml(initialContent);
+    const now = Date.now();
 
     const result = await db
       .insert(posts)
@@ -383,6 +384,8 @@ app.post("/posts", async (c) => {
         norm,
         status: "draft",
         userId: token.sub, // ユーザーIDを追加
+        createdAt: now,
+        updatedAt: now,
       })
       .returning();
 
