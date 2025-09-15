@@ -13,8 +13,8 @@
     "type-check": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --cache --write .",
     "format:check": "prettier --check .",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "node scripts/clean-uploads.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "node scripts/clean-uploads.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
     "db:generate": "npx drizzle-kit generate",
     "db:push": "npx drizzle-kit migrate"
