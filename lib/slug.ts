@@ -3,13 +3,9 @@ import { ulid } from "ulid";
 // 日本語文字列を正規化する
 function normalizeText(text: string): string {
   return text
-    .replace(/[\u30A1-\u30F6]/g, (match) =>
-      String.fromCharCode(match.charCodeAt(0) - 0x60)
-    )
+    .replace(/[\u30A1-\u30F6]/g, (match) => String.fromCharCode(match.charCodeAt(0) - 0x60))
     .toLowerCase()
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) =>
-      String.fromCharCode(char.charCodeAt(0) - 0xfee)
-    );
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee));
 }
 
 export function toSlug(title: string): string {

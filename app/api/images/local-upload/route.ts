@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-// import { auth } from "@/auth"; // 一時的にコメントアウト
+import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+
+import { NextRequest, NextResponse } from "next/server";
+// import { auth } from "@/auth"; // 一時的にコメントアウト
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,11 +20,11 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    
+
     if (!file) {
       return NextResponse.json(
         { success: false, errors: [{ message: "ファイルが見つかりません" }] },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -31,18 +32,18 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const fileName = `${timestamp}_${originalName}`;
-    
+
     // ファイルを保存
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
+
     // uploadsディレクトリが存在しない場合は作成
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     try {
       await mkdir(uploadDir, { recursive: true });
     } catch (error) {
       // ディレクトリがすでに存在する場合のエラーは無視
-      if ((error as any).code !== 'EEXIST') {
+      if ((error as any).code !== "EEXIST") {
         throw error;
       }
     }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     // public/uploadsディレクトリに保存
     const filePath = path.join(uploadDir, fileName);
     await writeFile(filePath, buffer);
-    
+
     // レスポンス（Cloudflare Images APIと同じ形式）
     return NextResponse.json({
       success: true,
@@ -64,11 +65,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("ローカル画像アップロードエラー:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        errors: [{ message: (error as Error).message }]
+      {
+        success: false,
+        errors: [{ message: (error as Error).message }],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

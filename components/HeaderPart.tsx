@@ -1,12 +1,15 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { isPostingEnabled } from "@/lib/featureFlags";
-import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
-import { ChevronDownIcon, UserIcon, SettingsIcon, LogOutIcon } from "lucide-react";
+import { debugFetchSession } from "@/lib/services/auth";
+import { createPost } from "@/lib/services/posts";
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -18,11 +21,9 @@ export default function Header() {
     if (process.env.NODE_ENV !== "production") {
       console.log("[AuthDebug] useSession status:", status);
       console.log("[AuthDebug] useSession session:", session);
-      // API の生値と差がないかも確認
-      fetch("/api/auth/session")
-        .then((r) => r.json())
-        .then((json) => console.log("[AuthDebug] /api/auth/session:", json))
-        .catch((e) => console.log("[AuthDebug] session fetch error:", e));
+      debugFetchSession().then((json) =>
+        console.log("[AuthDebug] /api/auth/session:", json),
+      );
     }
   }, [status, session]);
 
@@ -50,29 +51,16 @@ export default function Header() {
     }
 
     try {
-      const response = await fetch("/api/posts", {
-        method: "POST",
-      });
-
-      const result = await response.json() as { 
-        ok: boolean; 
-        post?: { id: string }; 
-        error?: string 
-      };
-      if (result.ok && result.post) {
-        // 作成成功時は新規記事ページへリダイレクト
-        window.location.href = `/articles/${result.post.id}/edit`;
-      } else {
-        console.error("下書き作成エラー:", result.error);
-        alert("記事の作成に失敗しました");
-      }
+      const post = await createPost();
+      // 作成成功時は新規記事ページへリダイレクト
+      window.location.href = `/articles/${post.id}/edit`;
     } catch (error) {
       console.error("下書き作成エラー:", error);
       alert("記事の作成に失敗しました");
     }
   };
   return (
-    <div className="flex justify-between items-center mb-6">
+    <div className="mb-6 flex items-center justify-between">
       <Link href="/" onClick={handleLogoClick}>
         <Image
           src="/fragbase_logo.png"
@@ -87,31 +75,31 @@ export default function Header() {
         {/* 認証状態によってUI切り替え */}
         {status === "loading" ? (
           // ローディング中
-          <div className="w-10 h-10 rounded-full bg-gray-300 animate-pulse"></div>
+          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-300"></div>
         ) : session ? (
           // ログイン状態
           <>
             {/* 投稿ボタン（ログインユーザーのみ表示） */}
             {isPostingEnabled() ? (
               <Button
-                className="bg-[#7DB7E8] hover:bg-[#6AA7D8] text-black px-6 py-2 rounded-full"
+                className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]"
                 onClick={handleCreateArticleClick}
               >
                 ＋ 記事を書く
               </Button>
             ) : (
               <Link href="/post">
-                <Button className="bg-[#7DB7E8] hover:bg-[#6AA7D8] text-black px-6 py-2 rounded-full">
+                <Button className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]">
                   ＋ 投稿
                 </Button>
               </Link>
             )}
-            
+
             {/* ユーザーメニュー */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-700"
+                className="flex items-center space-x-2 rounded-full p-2 hover:bg-gray-700"
               >
                 {session.user?.image ? (
                   <Image
@@ -122,22 +110,22 @@ export default function Header() {
                     className="rounded-full"
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                    <UserIcon size={16} />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-500">
+                    <User size={16} />
                   </div>
                 )}
-                <ChevronDownIcon size={16} />
+                <ChevronDown size={16} />
               </button>
-              
+
               {/* ドロップダウンメニュー */}
               {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                <div className="absolute right-0 z-50 mt-2 w-48 rounded-md border bg-white py-1 shadow-lg">
                   <Link
                     href="/profile"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
-                    <UserIcon size={16} className="mr-2" />
+                    <User size={16} className="mr-2" />
                     マイプロフィール
                   </Link>
                   <Link
@@ -145,7 +133,7 @@ export default function Header() {
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
-                    <SettingsIcon size={16} className="mr-2" />
+                    <Settings size={16} className="mr-2" />
                     設定
                   </Link>
                   <hr className="my-1" />
@@ -154,9 +142,9 @@ export default function Header() {
                       setShowDropdown(false);
                       signOut();
                     }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    <LogOutIcon size={16} className="mr-2" />
+                    <LogOut size={16} className="mr-2" />
                     ログアウト
                   </button>
                 </div>
@@ -167,7 +155,7 @@ export default function Header() {
           // 未ログイン状態
           <Button
             onClick={() => signIn()}
-            className="bg-[#7DB7E8] hover:bg-[#6AA7D8] text-black px-6 py-2 rounded-full"
+            className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]"
           >
             ログイン
           </Button>

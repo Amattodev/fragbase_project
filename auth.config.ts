@@ -1,36 +1,44 @@
-import type { NextAuthConfig } from "next-auth"
-import Google from "next-auth/providers/google"
-import Discord from "next-auth/providers/discord"
-import Twitch from "next-auth/providers/twitch"
-import { getDatabase } from "@/lib/db"
-import { users, accounts } from "@/db/schema"
-import { and, eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm";
+import Discord from "next-auth/providers/discord";
+import Google from "next-auth/providers/google";
+import Twitch from "next-auth/providers/twitch";
+
+import { accounts, users } from "@/db/schema";
+import { getDatabase } from "@/lib/server/db";
+
+import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
   providers: [
     // テスト用：まずはGoogleのみで動作確認
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
-      Google({
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      })
-    ] : []),
-    
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+
     // Discord（認証情報設定済みの場合のみ）
-    ...(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET ? [
-      Discord({
-        clientId: process.env.DISCORD_CLIENT_ID,
-        clientSecret: process.env.DISCORD_CLIENT_SECRET,
-      })
-    ] : []),
-    
+    ...(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET
+      ? [
+          Discord({
+            clientId: process.env.DISCORD_CLIENT_ID,
+            clientSecret: process.env.DISCORD_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+
     // Twitch（認証情報設定済みの場合のみ）
-    ...(process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET ? [
-      Twitch({
-        clientId: process.env.TWITCH_CLIENT_ID,
-        clientSecret: process.env.TWITCH_CLIENT_SECRET,
-      })
-    ] : []),
+    ...(process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET
+      ? [
+          Twitch({
+            clientId: process.env.TWITCH_CLIENT_ID,
+            clientSecret: process.env.TWITCH_CLIENT_SECRET,
+          }),
+        ]
+      : []),
   ],
   pages: {
     signIn: "/auth/signin",
@@ -51,7 +59,12 @@ export const authConfig = {
               const acc = await db
                 .select()
                 .from(accounts)
-                .where(and(eq(accounts.provider, account.provider), eq(accounts.providerAccountId, account.providerAccountId)))
+                .where(
+                  and(
+                    eq(accounts.provider, account.provider),
+                    eq(accounts.providerAccountId, account.providerAccountId),
+                  ),
+                )
                 .get();
               if (!acc) {
                 await db.insert(accounts).values({
@@ -149,4 +162,4 @@ export const authConfig = {
       }
     },
   },
-} satisfies NextAuthConfig
+} satisfies NextAuthConfig;

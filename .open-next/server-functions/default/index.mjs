@@ -183,6 +183,7 @@ var init_util = __esm({
 
 // node-built-in-modules:node:module
 var node_module_exports = {};
+import crypto from "node:crypto";
 import * as node_module_star from "node:module";
 var init_node_module = __esm({
   "node-built-in-modules:node:module"() {
@@ -1080,7 +1081,6 @@ var mod = (init_node_module(), __toCommonJS(node_module_exports));
 var resolveFilename = mod._resolveFilename;
 
 // node_modules/@opennextjs/aws/dist/core/routing/util.js
-import crypto from "node:crypto";
 import { Readable as Readable2 } from "node:stream";
 init_util();
 init_logger();

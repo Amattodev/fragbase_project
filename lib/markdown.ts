@@ -1,9 +1,9 @@
-import { unified } from "unified";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeStringify from "rehype-stringify";
+import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import remarkGfm from "remark-gfm";
-import rehypeStringify from "rehype-stringify";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { unified } from "unified";
 
 function autoEmbedYouTube(html: string): string {
   // Regular expression to find YouTube links
@@ -33,7 +33,7 @@ export const processVideoEmbeds = (html: string): string => {
               class="rounded-lg shadow-lg"
             ></iframe>
           </div>
-        `
+        `,
   );
 
   // ローカル動画の埋め込み（video-*参照リンクを処理）
@@ -50,7 +50,7 @@ export const processVideoEmbeds = (html: string): string => {
     /<img[^>]*alt="([^"]*)"[^>]*>\s*\[video-(\d+)\]/g,
     (match, altText, videoNum) => {
       const videoUrl = videoRefs[`video-${videoNum}`];
-      if (videoUrl && (videoUrl.includes('/uploads/videos/') || videoUrl.includes('.r2.dev'))) {
+      if (videoUrl && (videoUrl.includes("/uploads/videos/") || videoUrl.includes(".r2.dev"))) {
         return `
           <div class="video-embed my-6">
             <video
@@ -68,11 +68,11 @@ export const processVideoEmbeds = (html: string): string => {
         `;
       }
       return match;
-    }
+    },
   );
 
   // 参照リンク定義を削除（表示不要）
-  html = html.replace(/\[video-\d+\]:\s*.+$/gm, '');
+  html = html.replace(/\[video-\d+\]:\s*.+$/gm, "");
 
   return html;
 };
@@ -132,7 +132,7 @@ export async function markdownToHtml(markdown: string): Promise<string> {
 
 // Markdownから見出しを抽出する（目次用）
 export function extractHeadings(
-  markdown: string
+  markdown: string,
 ): Array<{ level: number; text: string; id: string }> {
   const headingRegex = /^(#{1,6})\s+(.+)$/gm;
   const headings = [];
