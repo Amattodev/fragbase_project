@@ -5,7 +5,8 @@ import Link from "next/link";
 import { getProviders, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-import { Button, Card } from "@/components";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export default function SignIn() {
   const [providers, setProviders] = useState<any>(null);

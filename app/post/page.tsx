@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Textarea } from "@/components";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { deviceOptions } from "@/constants/device";
 import { dpiOptions } from "@/constants/dpi";
 import { fpsExperienceOptions } from "@/constants/fpsExperience";

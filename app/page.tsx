@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import PostGrid from "@/app/_components/PostGrid";
 import ServiceMessage from "@/app/_components/ServiceMessage";
-import { Button } from "@/components";
+import { Button } from "@/components/ui/button";
 import { DEFAULT_POSTS_PAGE_SIZE } from "@/constants/pagination";
 import { getPublishedPosts } from "@/lib/services/posts";
 import type { Post } from "@/lib/services/posts";
