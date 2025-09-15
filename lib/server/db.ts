@@ -1,9 +1,12 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream:lib/db.ts
 import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleBetterSqlite } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 import 'server-only';
@@ -13,7 +16,10 @@ import { drizzle as drizzleBetterSqlite } from "drizzle-orm/better-sqlite3";
 import { drizzle } from "drizzle-orm/d1";
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes:lib/server/db.ts
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 import * as schema from "@/db/schema";
@@ -22,6 +28,7 @@ export function getDatabase() {
   const isProduction = process.env.NODE_ENV === "production";
 
   if (isProduction) {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream:lib/db.ts
     // Use Cloudflare context if already available (runtime). Avoid importing getCloudflareContext here
@@ -51,10 +58,13 @@ export function getDatabase() {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     return drizzle((getCloudflareContext().env as any).DB as unknown as D1Database, { schema });
   } else {
     const sqlite = new Database("./dev.db");
     return drizzleBetterSqlite(sqlite, { schema });
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 >>>>>>> Stashed changes:lib/server/db.ts
   }
@@ -62,6 +72,9 @@ export function getDatabase() {
   // Development: use local SQLite database
   const sqlite = new Database("./dev.db");
   return drizzleBetterSqlite(sqlite, { schema });
+=======
+  }
+>>>>>>> Stashed changes
 =======
   }
 >>>>>>> Stashed changes
