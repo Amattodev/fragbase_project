@@ -6,11 +6,11 @@ import { authConfig } from "./auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDatabase(), {
-    users,
-    accounts,
-    sessions,
-    verificationTokens,
-  }),
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+  } as any),
   session: { strategy: "jwt" },
   ...authConfig,
 })

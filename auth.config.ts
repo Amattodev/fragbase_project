@@ -39,14 +39,12 @@ export const authConfig = {
   trustHost: true,
   // 開発環境でもHTTPを許可（preview環境対応）
   useSecureCookies: false,
-  // 開発中はメール一致での他プロバイダ連携を許可（本番は非推奨）
-  allowDangerousEmailAccountLinking: process.env.NODE_ENV !== "production",
   callbacks: {
-    async signIn({ user, account, profile, email }) {
+    async signIn({ user, account, profile }) {
       if (process.env.NODE_ENV !== "production") {
         try {
           const db = getDatabase();
-          const mail = (user?.email || email?.email || (profile as any)?.email || "").toString();
+          const mail = (user?.email || (profile as any)?.email || "").toString();
           if (account && mail) {
             const existingUser = await db.select().from(users).where(eq(users.email, mail)).get();
             if (existingUser) {
@@ -127,25 +125,25 @@ export const authConfig = {
     },
   },
   events: {
-    async signIn(message) {
+    async signIn(message: any) {
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] events.signIn", {
-          userId: (message?.user as any)?.id,
-          accountProvider: (message?.account as any)?.provider,
+          userId: message?.user?.id,
+          accountProvider: message?.account?.provider,
         });
       }
     },
-    async signOut(message) {
+    async signOut(message: any) {
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] events.signOut", !!message?.session);
       }
     },
-    async createUser(message) {
+    async createUser(message: any) {
       if (process.env.NODE_ENV !== "production") {
-        console.log("[AuthDebug] events.createUser", (message?.user as any)?.id);
+        console.log("[AuthDebug] events.createUser", message?.user?.id);
       }
     },
-    async session(message) {
+    async session(message: any) {
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] events.session", !!message?.session?.user);
       }
