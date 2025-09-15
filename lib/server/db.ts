@@ -9,8 +9,11 @@ export function getDatabase() {
 
   if (isProduction) {
     // Use Cloudflare context if already available (runtime). Avoid importing context at module eval time.
-    const ctx = (globalThis as any)[Symbol.for("__cloudflare_context__")];
-    const d1 = (ctx?.env as any)?.DB as unknown as D1Database | undefined;
+    const ctx =
+      (globalThis as any)[Symbol.for("__cloudflare_context__")] ||
+      (globalThis as any)[Symbol.for("__cloudflare-context__")] ||
+      (globalThis as any);
+    const d1 = (ctx?.env?.DB || ctx?.DB) as unknown as D1Database | undefined;
     if (d1) {
       return drizzle(d1, { schema });
     }
