@@ -1,30 +1,40 @@
+import { and, desc, eq, isNull, like } from "drizzle-orm";
 import { Hono } from "hono";
-import { eq, and, desc, like, isNull } from "drizzle-orm";
-import type { InferSelectModel } from "drizzle-orm";
-import {
-  settings,
-  comments,
-  likes,
-  posts,
-  tags,
-  postTags,
-  gameCategories,
-  postGameCategories,
-  postLikes,
-  postComments,
-  postCommentLikes,
-  users,
-} from "@/db/schema";
-import { getDatabase } from "@/lib/db";
-import { markdownToHtml } from "@/lib/markdown";
-import { toSlug, normalizeTitle } from "@/lib/slug";
 import { handle } from "hono/vercel";
 import { getToken } from "next-auth/jwt";
-import { getRoleLabel } from "@/constants/role";
-import { getFpsExperienceLabel } from "@/constants/fpsExperience";
-import { getDpiLabel } from "@/constants/dpi";
+
 import { getDeviceLabel } from "@/constants/device";
-import { Tag } from "lucide-react";
+import { getDpiLabel } from "@/constants/dpi";
+import { getFpsExperienceLabel } from "@/constants/fpsExperience";
+import { getRoleLabel } from "@/constants/role";
+import {
+  comments,
+  gameCategories,
+  likes,
+  postCommentLikes,
+  postComments,
+  postGameCategories,
+  postLikes,
+  posts,
+  postTags,
+  settings,
+  tags,
+  users,
+} from "@/db/schema";
+import { markdownToHtml } from "@/lib/markdown";
+import { getDatabase } from "@/lib/server/db";
+import {
+  addSettingComment,
+  createSetting,
+  getSettingById,
+  getSettingComments,
+  getSettingLikesCount,
+  getSettingsList,
+  toggleSettingLike,
+} from "@/lib/services/server/settings";
+import { normalizeTitle, toSlug } from "@/lib/slug";
+
+import type { InferSelectModel } from "drizzle-orm";
 
 const app = new Hono().basePath("/api");
 
@@ -66,154 +76,24 @@ const mapLabelToKey = (game: string, label: string): string => {
 // 設定の全件取得
 app.get("/settings", async (c) => {
   try {
-    const db = getDatabase();
-
-    //クエリパラメータ取得
-    const gameFilter = c.req.query("game");
-    const fpsExperienceFilter = c.req.query("fpsExperience");
-    const roleFilter = c.req.query("role");
-    const characterFilter = c.req.query("character");
-    const deviceFilter = c.req.query("device");
     const limitParam = c.req.query("limit");
     const offsetParam = c.req.query("offset");
-
     const limit = limitParam ? parseInt(limitParam, 10) : 5;
     const offset = offsetParam ? parseInt(offsetParam, 10) : 0;
 
-    const whereConditions = [];
-
-    if (gameFilter) {
-      whereConditions.push(eq(settings.game, gameFilter));
-    }
-    if (fpsExperienceFilter) {
-      whereConditions.push(eq(settings.fpsExperience, fpsExperienceFilter));
-    }
-    if (roleFilter) {
-      whereConditions.push(eq(settings.role, roleFilter));
-    }
-    if (characterFilter) {
-      whereConditions.push(eq(settings.character, characterFilter));
-    }
-    if (deviceFilter) {
-      whereConditions.push(eq(settings.device, deviceFilter));
-    }
-
-    //データ取得
-    const result =
-      whereConditions.length > 0
-        ? await db
-            .select()
-            .from(settings)
-            .where(
-              whereConditions.length === 1
-                ? whereConditions[0]
-                : and(...whereConditions)
-            )
-            .orderBy(desc(settings.createdAt))
-            .limit(limit + 1)
-            .offset(offset)
-            .all()
-        : await db
-            .select()
-            .from(settings)
-            .orderBy(desc(settings.createdAt))
-            .limit(limit + 1)
-            .offset(offset)
-            .all();
-
-    const hasMore = result.length > limit;
-    const actualData = hasMore ? result.slice(0, limit) : result;
-
-    // いいね数を取得する関数;
-    const getLikesCount = async (settingId: number) => {
-      const result = await db
-        .select()
-        .from(likes)
-        .where(eq(likes.settingId, settingId))
-        .all();
-      return result.length || 0;
-    };
-    //データを変換
-    const transformedData = await Promise.all(
-      actualData.map(async (setting: Setting) => {
-        let gameSpecificSettings: GameSpecificSettings = {};
-        try {
-          gameSpecificSettings = setting.gameSpecificSettings
-            ? (JSON.parse(setting.gameSpecificSettings) as GameSpecificSettings)
-            : {};
-        } catch (e) {
-          console.error("JSON parse error:", e);
-        }
-        const roleLabel = getRoleLabel(setting.game, setting.role);
-        const fpsExperienceLabel = getFpsExperienceLabel(setting.fpsExperience);
-        const dpiLabel = getDpiLabel(setting.dpi);
-        const deviceLabel = getDeviceLabel(setting.device || "マウス");
-        const likesCount = await getLikesCount(setting.id);
-
-        // ゲームタイトルに応じた変換
-        // TODO:カウント情報を追加する
-        const baseData = {
-          id: setting.id,
-          gameTitle: setting.game,
-          role: roleLabel,
-          dpi: dpiLabel,
-          comment: setting.comment || "",
-          createdAt: setting.createdAt
-            ? new Date(setting.createdAt).toISOString().split("T")[0]
-            : "",
-          fpsExperience: fpsExperienceLabel,
-          character: setting.character || "不明",
-          device: deviceLabel,
-          likesCount: likesCount,
-        };
-
-        // ゲーム固有の設定を追加
-        switch (setting.game) {
-          case "APEX":
-            return {
-              ...baseData,
-              sensitivity: gameSpecificSettings.sensitivity || 0,
-              aimSensitivity: gameSpecificSettings.aimSensitivity || 0,
-              reactcurve: gameSpecificSettings.reactcurve || "リニア",
-              deadZone: gameSpecificSettings.deadZone || "なし",
-            };
-          case "VALORANT":
-            return {
-              ...baseData,
-              sensitivity: gameSpecificSettings.sensitivity || 0,
-            };
-          case "OVERWATCH2":
-            return {
-              ...baseData,
-              sensitivity: gameSpecificSettings.sensitivity || 0,
-            };
-          default:
-            return {
-              ...baseData,
-              sensitivity: 0,
-            };
-        }
-      })
-    );
-
-    return c.json({
-      ok: true,
-      data: transformedData,
-      pagination: {
-        limit,
-        offset,
-        hasMore,
-        currentPage: Math.floor(offset / limit) + 1,
-      },
+    const { data, pagination } = await getSettingsList({
+      game: c.req.query("game"),
+      fpsExperience: c.req.query("fpsExperience"),
+      role: c.req.query("role"),
+      character: c.req.query("character"),
+      device: c.req.query("device"),
+      limit,
+      offset,
     });
+
+    return c.json({ ok: true, data, pagination });
   } catch (error) {
-    return c.json(
-      {
-        ok: false,
-        error: (error as Error).message,
-      },
-      500
-    );
+    return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
 
@@ -228,15 +108,13 @@ app.get("/images/upload-token", async (c) => {
     console.log(
       `NODE_ENV: ${nodeEnv}, CLOUDFLARE_ACCOUNT_ID: ${
         accountId ? "set" : "not set"
-      }, CLOUDFLARE_IMAGES_API_TOKEN: ${apiToken ? "set" : "not set"}`
+      }, CLOUDFLARE_IMAGES_API_TOKEN: ${apiToken ? "set" : "not set"}`,
     );
 
     // 開発環境またはCloudflare設定が不足している場合はローカルアップロードを使用
     if (nodeEnv === "development" || !accountId || !apiToken) {
       if (!accountId || !apiToken) {
-        console.warn(
-          "Cloudflare設定が不足しています。ローカルモードで動作します。"
-        );
+        console.warn("Cloudflare設定が不足しています。ローカルモードで動作します。");
       }
       console.log("ローカルモードでトークンを返します");
       return c.json({
@@ -256,7 +134,7 @@ app.get("/images/upload-token", async (c) => {
           Authorization: `Bearer ${apiToken}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     console.log(`Cloudflare API レスポンスステータス: ${response.status}`);
@@ -297,11 +175,9 @@ app.get("/videos/upload-token", async (c) => {
     console.log(
       `NODE_ENV: ${nodeEnv}, R2_ACCESS_KEY_ID: ${
         r2AccessKeyId ? "set" : "not set"
-      }, R2_SECRET_ACCESS_KEY: ${
-        r2SecretAccessKey ? "set" : "not set"
-      }, R2_BUCKET_NAME: ${
+      }, R2_SECRET_ACCESS_KEY: ${r2SecretAccessKey ? "set" : "not set"}, R2_BUCKET_NAME: ${
         r2BucketName ? "set" : "not set"
-      }, CLOUDFLARE_ACCOUNT_ID: ${accountId ? "set" : "not set"}`
+      }, CLOUDFLARE_ACCOUNT_ID: ${accountId ? "set" : "not set"}`,
     );
 
     // 開発環境またはR2設定が不足している場合はローカルアップロードを使用
@@ -325,9 +201,7 @@ app.get("/videos/upload-token", async (c) => {
     }
 
     // 署名付きURLの生成（AWS SDK v3を使用）
-    const videoId = `video-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(7)}`;
+    const videoId = `video-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     // const key = `videos/${videoId}`; // 未使用のため削除
 
     // 簡易的な署名付きURL生成（本番環境では@aws-sdk/client-s3を使用推奨）
@@ -350,28 +224,31 @@ app.post("/posts", async (c) => {
   try {
     // 認証チェック（HonoのContextから）
     const req = c.req.raw;
-    const token = await getToken({ 
+    const token = await getToken({
       req: req,
-      secret: process.env.NEXTAUTH_SECRET 
+      secret: process.env.NEXTAUTH_SECRET,
     });
-    
+
     if (!token?.sub) {
       return c.json(
         {
           ok: false,
           error: "ログインが必要です",
         },
-        401
+        401,
       );
     }
 
     const db = getDatabase();
+
+    // DrizzleAdapter にユーザー作成/リンクは委ねる（手動での upsert は行わない）
 
     const initialTitle = "無題の記事";
     const initialContent = "";
     const slug = toSlug(initialTitle);
     const norm = normalizeTitle(initialTitle);
     const contentHtml = await markdownToHtml(initialContent);
+    const now = Date.now();
 
     const result = await db
       .insert(posts)
@@ -383,6 +260,8 @@ app.post("/posts", async (c) => {
         norm,
         status: "draft",
         userId: token.sub, // ユーザーIDを追加
+        createdAt: now,
+        updatedAt: now,
       })
       .returning();
 
@@ -396,7 +275,7 @@ app.post("/posts", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -429,7 +308,7 @@ app.get("/tags", async (c) => {
             ...tag,
             count: postTagsCount.length,
           };
-        })
+        }),
       );
       result = withCounts.sort((a, b) => b.count - a.count).slice(0, 20);
     }
@@ -444,7 +323,7 @@ app.get("/tags", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -453,11 +332,7 @@ app.get("/tags", async (c) => {
 app.get("/game-categories", async (c) => {
   try {
     const db = getDatabase();
-    const result = await db
-      .select()
-      .from(gameCategories)
-      .orderBy(gameCategories.name)
-      .all();
+    const result = await db.select().from(gameCategories).orderBy(gameCategories.name).all();
 
     return c.json({
       ok: true,
@@ -469,7 +344,7 @@ app.get("/game-categories", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -546,18 +421,14 @@ app.put("/posts/:id", async (c) => {
 
     // ゲームカテゴリの処理
     if (body.gameCategories) {
-      await db
-        .delete(postGameCategories)
-        .where(eq(postGameCategories.postId, id));
+      await db.delete(postGameCategories).where(eq(postGameCategories.postId, id));
 
       for (const gameCategoryName of body.gameCategories) {
         if (!gameCategoryName || gameCategoryName.trim() === "") continue;
 
         const trimmedName = gameCategoryName.trim();
         const existingCategories = await db.select().from(gameCategories).all();
-        const gameCategory = existingCategories.find(
-          (gc) => gc.name === trimmedName
-        );
+        const gameCategory = existingCategories.find((gc) => gc.name === trimmedName);
 
         if (gameCategory) {
           await db.insert(postGameCategories).values({
@@ -568,11 +439,7 @@ app.put("/posts/:id", async (c) => {
       }
     }
 
-    const postTagRelations = await db
-      .select()
-      .from(postTags)
-      .where(eq(postTags.postId, id))
-      .all();
+    const postTagRelations = await db.select().from(postTags).where(eq(postTags.postId, id)).all();
     const tagIds = postTagRelations.map((pt) => pt.tagId);
     let updatedPostTags: Tag[] = [];
 
@@ -587,15 +454,11 @@ app.put("/posts/:id", async (c) => {
       .where(eq(postGameCategories.postId, id))
       .all();
 
-    const gameCategoryIds = postGameCategoryRelations.map(
-      (pgc) => pgc.gameCategoryId
-    );
+    const gameCategoryIds = postGameCategoryRelations.map((pgc) => pgc.gameCategoryId);
     let updatedPostGameCategories: GameCategory[] = [];
     if (gameCategoryIds.length > 0) {
       const allGameCategories = await db.select().from(gameCategories).all();
-      updatedPostGameCategories = allGameCategories.filter((gc) =>
-        gameCategoryIds.includes(gc.id)
-      );
+      updatedPostGameCategories = allGameCategories.filter((gc) => gameCategoryIds.includes(gc.id));
     }
 
     return c.json({
@@ -612,7 +475,7 @@ app.put("/posts/:id", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -647,11 +510,7 @@ app.get("/posts/:id", async (c) => {
     }
 
     //タグ取得
-    const postTagRelations = await db
-      .select()
-      .from(postTags)
-      .where(eq(postTags.postId, id))
-      .all();
+    const postTagRelations = await db.select().from(postTags).where(eq(postTags.postId, id)).all();
 
     const tagIds = postTagRelations.map((pt) => pt.tagId);
     let postTagsResult: Tag[] = [];
@@ -668,16 +527,12 @@ app.get("/posts/:id", async (c) => {
       .where(eq(postGameCategories.postId, id))
       .all();
 
-    const gameCategoryIds = postGameCategoryRelations.map(
-      (pgc) => pgc.gameCategoryId
-    );
+    const gameCategoryIds = postGameCategoryRelations.map((pgc) => pgc.gameCategoryId);
     let postGameCategoriesResult: GameCategory[] = [];
 
     if (gameCategoryIds.length > 0) {
       const allGameCategories = await db.select().from(gameCategories).all();
-      postGameCategoriesResult = allGameCategories.filter((gc) =>
-        gameCategoryIds.includes(gc.id)
-      );
+      postGameCategoriesResult = allGameCategories.filter((gc) => gameCategoryIds.includes(gc.id));
     }
 
     return c.json({
@@ -695,7 +550,7 @@ app.get("/posts/:id", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -774,17 +629,12 @@ app.get("/posts", async (c) => {
           .from(postGameCategories)
           .where(eq(postGameCategories.postId, post.id))
           .all();
-        const gameCategoryIds = postGameCategoryRelations.map(
-          (pgc) => pgc.gameCategoryId
-        );
+        const gameCategoryIds = postGameCategoryRelations.map((pgc) => pgc.gameCategoryId);
         let postGameCategoriesResult: GameCategory[] = [];
         if (gameCategoryIds.length > 0) {
-          const allGameCategories = await db
-            .select()
-            .from(gameCategories)
-            .all();
+          const allGameCategories = await db.select().from(gameCategories).all();
           postGameCategoriesResult = allGameCategories.filter((gc) =>
-            gameCategoryIds.includes(gc.id)
+            gameCategoryIds.includes(gc.id),
           );
         }
         return {
@@ -793,11 +643,9 @@ app.get("/posts", async (c) => {
           tags: postTagsResult,
           gameCategories: postGameCategoriesResult,
           excerpt:
-            post.content.length > 150
-              ? post.content.substring(0, 150) + "..."
-              : post.content,
+            post.content.length > 150 ? post.content.substring(0, 150) + "..." : post.content,
         };
-      })
+      }),
     );
     return c.json({
       ok: true,
@@ -815,7 +663,7 @@ app.get("/posts", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -831,11 +679,7 @@ app.get("/posts/:id/likes/count", async (c) => {
       return c.json({ ok: false, error: "Invalid post ID format" }, 400);
     }
 
-    const result = await db
-      .select()
-      .from(postLikes)
-      .where(eq(postLikes.postId, postId))
-      .all();
+    const result = await db.select().from(postLikes).where(eq(postLikes.postId, postId)).all();
     return c.json({
       ok: true,
       likesCount: result.length,
@@ -846,7 +690,7 @@ app.get("/posts/:id/likes/count", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -873,24 +717,14 @@ app.post("/posts/:id/likes", async (c) => {
     const existingLike = await db
       .select()
       .from(postLikes)
-      .where(
-        and(
-          eq(postLikes.postId, postId),
-          eq(postLikes.userIdentifier, userIdentifier)
-        )
-      )
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userIdentifier, userIdentifier)))
       .get();
 
     if (existingLike) {
       // いいねが既に存在する場合は削除
       await db
         .delete(postLikes)
-        .where(
-          and(
-            eq(postLikes.postId, postId),
-            eq(postLikes.userIdentifier, userIdentifier)
-          )
-        );
+        .where(and(eq(postLikes.postId, postId), eq(postLikes.userIdentifier, userIdentifier)));
       return c.json({ ok: true, message: "Like removed successfully" });
     } else {
       // いいねが存在しない場合は追加
@@ -906,7 +740,7 @@ app.post("/posts/:id/likes", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -952,11 +786,7 @@ app.get("/posts/:id/comments", async (c) => {
       return c.json({ ok: false, error: "Invalid post ID format" }, 400);
     }
 
-    const post = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.id, postId))
-      .get();
+    const post = await db.select().from(posts).where(eq(posts.id, postId)).get();
 
     console.log("記事検索結果:", post);
 
@@ -967,7 +797,7 @@ app.get("/posts/:id/comments", async (c) => {
           error: "記事が見つかりません",
           debug: postId,
         },
-        404
+        404,
       );
     }
 
@@ -980,7 +810,7 @@ app.get("/posts/:id/comments", async (c) => {
           error: "公開されていない記事のコメントは取得できません",
           debug: post.status,
         },
-        403
+        403,
       );
     }
 
@@ -992,17 +822,13 @@ app.get("/posts/:id/comments", async (c) => {
     const parentComments = await db
       .select()
       .from(postComments)
-      .where(
-        and(eq(postComments.postId, postId), isNull(postComments.parentId))
-      )
+      .where(and(eq(postComments.postId, postId), isNull(postComments.parentId)))
       .orderBy(desc(postComments.createdAt))
       .limit(limit + 1)
       .offset(offset)
       .all();
     const hasMore = parentComments.length > limit;
-    const actualData = hasMore
-      ? parentComments.slice(0, limit)
-      : parentComments;
+    const actualData = hasMore ? parentComments.slice(0, limit) : parentComments;
 
     // 各コメントのメタデータを取得
     const commentsWithMetadata = await Promise.all(
@@ -1042,7 +868,7 @@ app.get("/posts/:id/comments", async (c) => {
               })
             : "",
         };
-      })
+      }),
     );
 
     return c.json({
@@ -1060,7 +886,7 @@ app.get("/posts/:id/comments", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -1079,19 +905,12 @@ app.post("/posts/:id/comments", async (c) => {
     const body = await c.req.json();
 
     // バリデーション
-    if (
-      !body.content ||
-      typeof body.content !== "string" ||
-      body.content.trim().length === 0
-    ) {
+    if (!body.content || typeof body.content !== "string" || body.content.trim().length === 0) {
       return c.json({ ok: false, error: "コメント内容は必須です" }, 400);
     }
 
     if (body.content.trim().length > 500) {
-      return c.json(
-        { ok: false, error: "コメントは500文字以下で入力してください" },
-        400
-      );
+      return c.json({ ok: false, error: "コメントは500文字以下で入力してください" }, 400);
     }
 
     // 返信の場合、親コメントの存在確認
@@ -1108,17 +927,10 @@ app.post("/posts/:id/comments", async (c) => {
     }
 
     // 記事の存在確認
-    const post = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.id, postId))
-      .get();
+    const post = await db.select().from(posts).where(eq(posts.id, postId)).get();
 
     if (!post || post.status !== "published") {
-      return c.json(
-        { ok: false, error: "記事が見つかりません", debug: postId },
-        404
-      );
+      return c.json({ ok: false, error: "記事が見つかりません", debug: postId }, 404);
     }
 
     // データベースに挿入
@@ -1218,7 +1030,7 @@ app.get("/posts/:postId/comments/:commentId/replies", async (c) => {
               })
             : "",
         };
-      })
+      }),
     );
 
     return c.json({
@@ -1254,8 +1066,8 @@ app.post("/posts/:postId/comments/:commentId/likes", async (c) => {
       .where(
         and(
           eq(postCommentLikes.commentId, commentId),
-          eq(postCommentLikes.userIdentifier, userIdentifier)
-        )
+          eq(postCommentLikes.userIdentifier, userIdentifier),
+        ),
       )
       .get();
 
@@ -1266,8 +1078,8 @@ app.post("/posts/:postId/comments/:commentId/likes", async (c) => {
         .where(
           and(
             eq(postCommentLikes.commentId, commentId),
-            eq(postCommentLikes.userIdentifier, userIdentifier)
-          )
+            eq(postCommentLikes.userIdentifier, userIdentifier),
+          ),
         );
       return c.json({ ok: true, liked: false });
     } else {
@@ -1289,17 +1101,10 @@ app.get("/posts/:id/:slug", async (c) => {
     const db = getDatabase();
     const slug = c.req.param("slug");
 
-    const result = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.slug, slug))
-      .get();
+    const result = await db.select().from(posts).where(eq(posts.slug, slug)).get();
 
     if (!result) {
-      return c.json(
-        { ok: false, error: "記事が見つかりません", debug: `slug: ${slug}` },
-        404
-      );
+      return c.json({ ok: false, error: "記事が見つかりません", debug: `slug: ${slug}` }, 404);
     }
 
     return c.json({
@@ -1312,7 +1117,7 @@ app.get("/posts/:id/:slug", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });
@@ -1320,8 +1125,6 @@ app.get("/posts/:id/:slug", async (c) => {
 // 設定新規作成
 app.post("/settings", async (c) => {
   try {
-    const db = getDatabase();
-
     const body = await c.req.json();
 
     // 基本的なバリデーション（zodの代わり）
@@ -1331,7 +1134,7 @@ app.post("/settings", async (c) => {
           ok: false,
           error: "game, role, dpi are required fields",
         },
-        400
+        400,
       );
     }
 
@@ -1352,13 +1155,12 @@ app.post("/settings", async (c) => {
       });
     }
 
-    // ゲーム固有設定をJSON文字列として準備
+    // ゲーム固有設定を準備
     const gameSpecificSettings = {
       ...mappedSliders,
       ...mappedSelects,
     };
-
-    const insertData = {
+    const id = await createSetting({
       game: body.game,
       role: body.role,
       dpi: body.dpi,
@@ -1366,117 +1168,22 @@ app.post("/settings", async (c) => {
       fpsExperience: body.fpsExperience,
       character: body.character,
       device: body.device,
-      gameSpecificSettings: JSON.stringify(gameSpecificSettings),
-    };
-
-    // DBにデータを挿入する
-    const result = await db.insert(settings).values(insertData).returning();
-
-    // 成功時に挿入したデータのIDを返す
-    return c.json({
-      ok: true,
-      id: result[0].id,
+      gameSpecificSettings,
     });
+    return c.json({ ok: true, id });
   } catch (error) {
-    return c.json(
-      {
-        ok: false,
-        error: (error as Error).message,
-      },
-      500
-    );
+    return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
 
 //特定の投稿を取得する
 app.get("/settings/:id", async (c) => {
   try {
-    const db = getDatabase();
-
-    const idParam = c.req.param("id");
-    const id = Number(idParam);
-
-    if (isNaN(id)) {
-      return c.json({ ok: false, error: "Invalid ID format" }, 400);
-    }
-
-    const result = await db
-      .select()
-      .from(settings)
-      .where(eq(settings.id, id))
-      .get();
-
-    if (!result) {
-      return c.json({ ok: false, error: "Setting not found" }, 404);
-    }
-
-    // ゲーム固有設定をパース
-    let gameSpecificSettings: GameSpecificSettings = {};
-    try {
-      gameSpecificSettings = result.gameSpecificSettings
-        ? (JSON.parse(result.gameSpecificSettings) as GameSpecificSettings)
-        : {};
-    } catch (e) {
-      console.error("JSON parse error:", e);
-    }
-
-    const roleLabel = getRoleLabel(result.game, result.role);
-    const fpsExperienceLabel = getFpsExperienceLabel(result.fpsExperience);
-    const dpiLabel = getDpiLabel(result.dpi);
-    const deviceLabel = getDeviceLabel(result.device || "マウス");
-
-    // フロントエンドの型に合わせてデータを変換
-    const baseData = {
-      id: result.id,
-      gameTitle: result.game,
-      role: roleLabel,
-      dpi: dpiLabel,
-      comment: result.comment || "",
-      createdAt: result.createdAt
-        ? new Date(result.createdAt).toISOString().split("T")[0]
-        : "",
-      fpsExperience: fpsExperienceLabel,
-      character: result.character || "不明",
-      device: deviceLabel,
-    };
-
-    // ゲーム固有の設定を追加
-    let transformedData;
-    switch (result.game) {
-      case "APEX":
-        transformedData = {
-          ...baseData,
-          sensitivity: gameSpecificSettings.sensitivity || 0,
-          aimSensitivity: gameSpecificSettings.aimSensitivity || 0,
-          reactcurve: gameSpecificSettings.reactcurve || "リニア",
-          deadZone: gameSpecificSettings.deadZone || "なし",
-        };
-        break;
-      case "VALORANT":
-        transformedData = {
-          ...baseData,
-          sensitivity: gameSpecificSettings.sensitivity || 0,
-        };
-        break;
-      case "OVERWATCH2":
-        transformedData = {
-          ...baseData,
-          sensitivity: gameSpecificSettings.sensitivity || 0,
-          scopedSensitivity: gameSpecificSettings.scopedSensitivity || 0,
-          aimAssist: gameSpecificSettings.aimAssist || "50%",
-        };
-        break;
-      default:
-        transformedData = {
-          ...baseData,
-          sensitivity: 0,
-        };
-    }
-
-    return c.json({
-      ok: true,
-      data: transformedData,
-    });
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return c.json({ ok: false, error: "Invalid ID format" }, 400);
+    const data = await getSettingById(id);
+    if (!data) return c.json({ ok: false, error: "Setting not found" }, 404);
+    return c.json({ ok: true, data });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
@@ -1485,36 +1192,10 @@ app.get("/settings/:id", async (c) => {
 //コメントを取得する
 app.get("/settings/:id/comments", async (c) => {
   try {
-    const db = getDatabase();
-
-    const idParam = c.req.param("id");
-    const settingId = Number(idParam);
-
-    if (isNaN(settingId)) {
-      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
-    }
-
-    const result = await db
-      .select()
-      .from(comments)
-      .where(eq(comments.settingId, settingId))
-      .orderBy(desc(comments.createdAt))
-      .all();
-
-    const transformedComments = result.map((comment: Comment) => ({
-      id: comment.id,
-      settingId: comment.settingId,
-      content: comment.content,
-      author: comment.author || "匿名ユーザー",
-      createdAt: comment.createdAt
-        ? new Date(comment.createdAt).toLocaleDateString("ja-JP")
-        : "",
-    }));
-
-    return c.json({
-      ok: true,
-      comments: transformedComments,
-    });
+    const settingId = Number(c.req.param("id"));
+    if (isNaN(settingId)) return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
+    const comments = await getSettingComments(settingId);
+    return c.json({ ok: true, comments });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
@@ -1523,89 +1204,26 @@ app.get("/settings/:id/comments", async (c) => {
 //いいね数を取得
 app.get("/settings/:id/likes/count", async (c) => {
   try {
-    const db = getDatabase();
-    const idParam = c.req.param("id");
-    const settingId = Number(idParam);
-
-    if (isNaN(settingId)) {
-      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
-    }
-    const result = await db
-      .select()
-      .from(likes)
-      .where(eq(likes.settingId, settingId))
-      .all();
-
-    return c.json({
-      ok: true,
-      likesCount: result.length,
-    });
+    const settingId = Number(c.req.param("id"));
+    if (isNaN(settingId)) return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
+    const likesCount = await getSettingLikesCount(settingId);
+    return c.json({ ok: true, likesCount });
   } catch (error) {
-    return c.json(
-      {
-        ok: false,
-        error: (error as Error).message,
-      },
-      500
-    );
+    return c.json({ ok: false, error: (error as Error).message }, 500);
   }
 });
 
 // コメント作成
 app.post("/settings/:id/comments", async (c) => {
   try {
-    const db = getDatabase();
-
-    const idParam = c.req.param("id");
-    const settingId = Number(idParam);
-
-    if (isNaN(settingId)) {
-      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
-    }
-
+    const settingId = Number(c.req.param("id"));
+    if (isNaN(settingId)) return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
     const body = await c.req.json();
-
-    // 基本的なバリデーション（zodの代わり）
-    if (
-      !body.content ||
-      typeof body.content !== "string" ||
-      body.content.trim().length === 0
-    ) {
-      return c.json(
-        {
-          ok: false,
-          error: "コメント内容は必須です",
-        },
-        400
-      );
+    if (!body.content || typeof body.content !== "string" || body.content.trim().length === 0) {
+      return c.json({ ok: false, error: "コメント内容は必須です" }, 400);
     }
-
-    // データベースに挿入
-    const result = await db
-      .insert(comments)
-      .values({
-        settingId: settingId,
-        content: body.content.trim(),
-        author: body.author || null,
-      })
-      .returning();
-
-    // 挿入されたデータを取得
-    const insertedComment = result[0];
-    const transformedComment = {
-      id: insertedComment.id,
-      settingId: insertedComment.settingId,
-      content: insertedComment.content,
-      author: insertedComment.author || "匿名ユーザー",
-      createdAt: insertedComment.createdAt
-        ? new Date(insertedComment.createdAt).toLocaleDateString("ja-JP")
-        : "",
-    };
-
-    return c.json({
-      ok: true,
-      comment: transformedComment,
-    });
+    const comment = await addSettingComment(settingId, body.content, body.author);
+    return c.json({ ok: true, comment });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
@@ -1614,64 +1232,14 @@ app.post("/settings/:id/comments", async (c) => {
 // いいねを追加/削除する
 app.post("/settings/:id/likes", async (c) => {
   try {
-    const db = getDatabase();
-    const idParam = c.req.param("id");
-    const settingId = Number(idParam);
-
-    if (isNaN(settingId)) {
-      return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
-    }
-
+    const settingId = Number(c.req.param("id"));
+    if (isNaN(settingId)) return c.json({ ok: false, error: "Invalid setting ID format" }, 400);
     const body = await c.req.json();
-    const userIdentifier = body.userIdentifier;
-
-    if (!userIdentifier) {
-      return c.json(
-        {
-          ok: false,
-          error: "userIdentifier is required",
-        },
-        400
-      );
-    }
-
-    //既存のいいねをチェック
-    const existingLike = await db
-      .select()
-      .from(likes)
-      .where(
-        and(
-          eq(likes.settingId, settingId),
-          eq(likes.userIdentifier, userIdentifier)
-        )
-      )
-      .get();
-
-    if (existingLike) {
-      await db
-        .delete(likes)
-        .where(
-          and(
-            eq(likes.settingId, settingId),
-            eq(likes.userIdentifier, userIdentifier)
-          )
-        );
-      return c.json({
-        ok: true,
-        message: "Like removed successfully",
-      });
-    } else {
-      // いいねを追加
-      await db.insert(likes).values({
-        settingId: settingId,
-        userIdentifier: userIdentifier,
-      });
-
-      return c.json({
-        ok: true,
-        message: "Like added successfully",
-      });
-    }
+    const userIdentifier = body.userIdentifier as string | undefined;
+    if (!userIdentifier) return c.json({ ok: false, error: "userIdentifier is required" }, 400);
+    const result = await toggleSettingLike(settingId, userIdentifier);
+    const message = (result as any).removed ? "Like removed successfully" : "Like added successfully";
+    return c.json({ ok: true, message });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);
   }
@@ -1688,11 +1256,7 @@ app.delete("/posts/:id", async (c) => {
     }
 
     // 記事が存在するかチェック
-    const existingPost = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.id, id))
-      .get();
+    const existingPost = await db.select().from(posts).where(eq(posts.id, id)).get();
 
     if (!existingPost) {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
@@ -1715,7 +1279,7 @@ app.delete("/posts/:id", async (c) => {
         ok: false,
         error: (error as Error).message,
       },
-      500
+      500,
     );
   }
 });

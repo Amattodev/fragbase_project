@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import process from "node:process";
 import stream from "node:stream";
+
 import * as nextEnvVars from "./next-env.mjs";
 const cloudflareContextALS = new AsyncLocalStorage();
 Object.defineProperty(globalThis, Symbol.for("__cloudflare-context__"), {
@@ -49,7 +50,7 @@ function initRuntime() {
   };
   Object.assign(globalThis, {
     Request: CustomRequest,
-    __BUILD_TIMESTAMP_MS__: 1757431103256,
+    __BUILD_TIMESTAMP_MS__: 1757438320412,
     __NEXT_BASE_PATH__: "",
     // The external middleware will use the convertTo function of the `edge` converter
     // by default it will try to fetch the request, but since we are running everything in the same worker

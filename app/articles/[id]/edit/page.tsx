@@ -1,26 +1,22 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import EditorComponent from "@/components/Editor";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import MultiSelect from "@/components/MultiSelect";
+import React, { useCallback, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  status: string;
-  slug: string;
-  tags?: { id: number; name: string; norm: string }[];
-  gameCategories?: {
-    id: number;
-    name: string;
-    displayName: string;
-  }[];
-}
+import MultiSelect from "@/components/MultiSelect";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  getPost,
+  getGameCategories,
+  searchTags,
+  updatePost as updatePostService,
+  deletePost as deletePostService,
+} from "@/lib/services/posts";
+import type { Post } from "@/lib/services/posts";
+
+import EditorComponent from "../../_components/Editor";
 
 interface ApiResponse {
   ok: boolean;
@@ -48,44 +44,34 @@ export default function ArticleEditPage() {
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [tagSuggestions, setTagSuggestions] = useState<{id: number; name: string}[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<{ id: number; name: string }[]>([]);
   const [gameCategories, setGameCategories] = useState<string[]>([]);
-  const [availableGameCategories, setAvailableGameCategories] = useState<{id: number; name: string; displayName: string}[]>(
-    []
-  );
+  const [availableGameCategories, setAvailableGameCategories] = useState<
+    { id: number; name: string; displayName: string }[]
+  >([]);
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const articleId = params.id as string;
 
   // 記事データの取得
   useEffect(() => {
-    const fetchPost = async () => {
+    const load = async () => {
       try {
-        const res = await fetch(`/api/posts/${articleId}`);
-        const data = (await res.json()) as ApiResponse;
-
-        if (data.ok && data.post) {
-          setPost(data.post);
-          setTitle(data.post.title);
-          setContent(data.post.content);
-          setStatus(data.post.status as "draft" | "published");
-          setTags(data.post.tags?.map((tag) => tag.name) || []);
-          setGameCategories(
-            data.post.gameCategories?.map((gc) => gc.name) || []
-          );
-          setOriginalContent({
-            title: data.post.title,
-            content: data.post.content,
-            status: data.post.status as "published" | "draft",
-            tags: data.post.tags?.map((tag) => tag.name) || [],
-            gameCategories:
-              data.post.gameCategories?.map((gc) => gc.name) || [],
-          });
-          setHasUnsavedChanges(false);
-        } else {
-          console.error("記事の取得に失敗:", data.error);
-          router.push("/");
-        }
+        const data = await getPost(articleId);
+        setPost(data);
+        setTitle(data.title);
+        setContent(data.content);
+        setStatus(data.status as "draft" | "published");
+        setTags(data.tags?.map((tag) => tag.name) || []);
+        setGameCategories(data.gameCategories?.map((gc) => gc.name) || []);
+        setOriginalContent({
+          title: data.title,
+          content: data.content,
+          status: data.status as "published" | "draft",
+          tags: data.tags?.map((tag) => tag.name) || [],
+          gameCategories: data.gameCategories?.map((gc) => gc.name) || [],
+        });
+        setHasUnsavedChanges(false);
       } catch (error) {
         console.error("記事取得エラー:", error);
         router.push("/");
@@ -95,28 +81,21 @@ export default function ArticleEditPage() {
     };
 
     if (articleId) {
-      fetchPost();
+      load();
     }
   }, [articleId, router]);
 
   // ゲームカテゴリ一覧の取得
   useEffect(() => {
-    const fetchGameCategories = async () => {
+    const loadCategories = async () => {
       try {
-        const res = await fetch("/api/game-categories");
-        const data = await res.json() as { ok: boolean; gameCategories: {id: number; name: string}[] };
-        if (data.ok) {
-          setAvailableGameCategories(data.gameCategories.map(gc => ({
-            ...gc,
-            displayName: gc.name
-          })));
-        }
+        const cats = await getGameCategories();
+        setAvailableGameCategories(cats);
       } catch (error) {
         console.error("ゲームカテゴリ取得エラー:", error);
       }
     };
-
-    fetchGameCategories();
+    loadCategories();
   }, []);
 
   const handleTitleChange = (newTitle: string) => {
@@ -126,8 +105,7 @@ export default function ArticleEditPage() {
         content !== originalContent.content ||
         status !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !==
-          JSON.stringify(originalContent.gameCategories)
+        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -138,8 +116,7 @@ export default function ArticleEditPage() {
         newContent !== originalContent.content ||
         status !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !==
-          JSON.stringify(originalContent.gameCategories)
+        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -150,8 +127,7 @@ export default function ArticleEditPage() {
         content !== originalContent.content ||
         newStatus !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !==
-          JSON.stringify(originalContent.gameCategories)
+        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -178,11 +154,8 @@ export default function ArticleEditPage() {
 
     if (value.trim().length > 0) {
       try {
-        const res = await fetch(`/api/tags?q=${encodeURIComponent(value)}`);
-        const data = await res.json() as { ok: boolean; tags: {id: number; name: string}[] };
-        if (data.ok) {
-          setTagSuggestions(data.tags);
-        }
+        const tags = await searchTags(value);
+        setTagSuggestions(tags);
       } catch (error) {
         console.error("タグの検索エラー:", error);
       }
@@ -197,8 +170,7 @@ export default function ArticleEditPage() {
       title !== originalContent.title ||
         content !== originalContent.content ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(newGameCategories) !==
-          JSON.stringify(originalContent.gameCategories)
+        JSON.stringify(newGameCategories) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -208,28 +180,19 @@ export default function ArticleEditPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          status,
-          tags,
-          gameCategories,
-        }),
+      const data = await updatePostService(post.id, {
+        title,
+        content,
+        status,
+        tags,
+        gameCategories,
       });
-
-      const data = (await res.json()) as ApiResponse;
-      if (data.ok && data.post) {
+      if (data) {
         console.log("保存成功");
-        setPost(data.post);
+        setPost(data);
         setOriginalContent({ title, content, status, tags, gameCategories });
         setHasUnsavedChanges(false);
       } else {
-        console.error("保存失敗:", data.error);
         alert("保存に失敗しました");
       }
     } catch (error) {
@@ -275,17 +238,10 @@ export default function ArticleEditPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: "DELETE",
-      });
-
-      const data = await res.json() as { ok: boolean; error?: string };
-      if (data.ok) {
+      await deletePostService(post.id);
+      {
         console.log("記事が削除されました");
         router.push("/");
-      } else {
-        console.error("削除失敗:", data.error);
-        alert("削除に失敗しました");
       }
     } catch (error) {
       console.error("削除エラー:", error);
@@ -303,7 +259,7 @@ export default function ArticleEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
         <div>記事を読み込み中...</div>
       </div>
     );
@@ -311,7 +267,7 @@ export default function ArticleEditPage() {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
         <div>記事が見つかりません</div>
       </div>
     );
@@ -341,23 +297,23 @@ export default function ArticleEditPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5]">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       {/* ヘッダー */}
       <div className="border-b border-gray-700 p-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               onClick={handleGoHome}
               variant="outline"
               size="sm"
-              className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+              className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
             >
               ← ホーム
             </Button>
             <h1 className="text-xl font-bold">記事編集</h1>
             {hasUnsavedChanges && (
-              <div className="flex items-center text-sm text-[#FF6B6B]">
-                <span className="inline-block w-2 h-2 bg-[#FF6B6B] rounded-full mr-2 animate-pulse"></span>
+              <div className="flex items-center text-sm text-[var(--color-danger)]">
+                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-danger)]"></span>
                 未保存
               </div>
             )}
@@ -366,15 +322,13 @@ export default function ArticleEditPage() {
           </div> */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-[#F5F5F5]">
+              <label className="text-sm text-[var(--color-text)]">
                 {status === "published" ? "公開中" : "下書き"}
               </label>
               <button
-                onClick={() =>
-                  handleStatusChange(status === "draft" ? "published" : "draft")
-                }
+                onClick={() => handleStatusChange(status === "draft" ? "published" : "draft")}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  status === "published" ? "bg-[#7DB7E8]" : "bg-gray-600"
+                  status === "published" ? "bg-[var(--color-accent)]" : "bg-gray-600"
                 }`}
               >
                 <span
@@ -389,7 +343,7 @@ export default function ArticleEditPage() {
               onClick={handleDeleteClick}
               variant="outline"
               size="sm"
-              className="bg-red-600 border-red-600 text-white hover:bg-red-700 hover:border-red-700"
+              className="border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
             >
               削除
             </Button>
@@ -398,55 +352,53 @@ export default function ArticleEditPage() {
               disabled={saving}
               className={`${
                 hasUnsavedChanges && !saving
-                  ? "bg-[#FF6B6B] text-white hover:bg-[#FF5252] animate-pulse"
+                  ? "animate-pulse bg-[var(--color-danger)] text-white hover:brightness-110"
                   : status === "published"
-                  ? "bg-[#22C55E] text-white hover:bg-[#16A34A]"
-                  : "bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]"
+                    ? "bg-[var(--color-success)] text-white hover:brightness-110"
+                    : "bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
               }`}
             >
               {saving
                 ? "保存中..."
                 : hasUnsavedChanges
-                ? "未保存"
-                : status === "published"
-                ? "公開中"
-                : "下書き保存"}
+                  ? "未保存"
+                  : status === "published"
+                    ? "公開中"
+                    : "下書き保存"}
             </Button>
           </div>
         </div>
       </div>
 
       {/* メインコンテンツ */}
-      <div className="max-w-6xl mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-120px)]">
+      <div className="mx-auto max-w-6xl p-4">
+        <div className="grid h-[calc(100vh-120px)] grid-cols-1 gap-6 lg:grid-cols-2">
           {/* エディタ部分 */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">タイトル</label>
+              <label className="mb-2 block text-sm font-medium">タイトル</label>
               <Input
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="記事のタイトルを入力..."
-                className={`bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] ${
-                  hasUnsavedChanges ? "border-[#FF6B6B]" : ""
+                className={`border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] ${
+                  hasUnsavedChanges ? "border-[var(--color-danger)]" : ""
                 }`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
-                タグ（最大5個）
-              </label>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <label className="mb-2 block text-sm font-medium">タグ（最大5個）</label>
+              <div className="mb-2 flex flex-wrap gap-2">
                 {tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="bg-[#7DB7E8] text-black px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                    className="flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-1 text-sm text-black"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => handleTagRemove(tag)}
-                      className="hover:bg-black hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      className="flex h-4 w-4 items-center justify-center rounded-full text-xs hover:bg-black hover:text-white"
                     >
                       ×
                     </button>
@@ -466,18 +418,18 @@ export default function ArticleEditPage() {
                       }
                     }}
                     placeholder="タグを入力してEnter"
-                    className="bg-[#2B2B2B] border-gray-600 text-[#F5F5F5]"
+                    className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)]"
                   />
 
                   {/* タグ候補を表示 */}
                   {tagSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-[#2B2B2B] border border-gray-600 rounded-md mt-1 z-10">
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-600 bg-[var(--color-surface)]">
                       {tagSuggestions.map((suggestion) => (
                         <button
                           key={suggestion.id}
                           type="button"
                           onClick={() => handleTagAdd(suggestion.name)}
-                          className="block w-full text-left px-3 py-2 hover:bg-[#3B3B3B] text-[#F5F5F5]"
+                          className="block w-full px-3 py-2 text-left text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
                         >
                           {suggestion.name}
                         </button>
@@ -488,9 +440,7 @@ export default function ArticleEditPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
-                ゲームタイトル（複数選択可）
-              </label>
+              <label className="mb-2 block text-sm font-medium">ゲームタイトル（複数選択可）</label>
               <MultiSelect
                 options={availableGameCategories}
                 selectedValues={gameCategories}
@@ -500,9 +450,7 @@ export default function ArticleEditPage() {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium mb-2">
-                本文（Markdown）
-              </label>
+              <label className="mb-2 block text-sm font-medium">本文（Markdown）</label>
               <div className="h-[calc(100vh-240px)]">
                 <EditorComponent
                   content={content}
@@ -515,31 +463,25 @@ export default function ArticleEditPage() {
           </div>
 
           {/* プレビュー部分 */}
-          <div className="bg-[#2B2B2B] rounded-lg p-4 overflow-auto">
-            <h3 className="text-lg font-semibold mb-4">プレビュー</h3>
+          <div className="overflow-auto rounded-lg bg-[var(--color-surface)] p-4">
+            <h3 className="mb-4 text-lg font-semibold">プレビュー</h3>
             <div className="prose prose-invert max-w-none">
-              <h1 className="text-2xl font-bold mb-4 border-b border-gray-600 pb-2">
+              <h1 className="mb-4 border-b border-gray-600 pb-2 text-2xl font-bold">
                 {title || "タイトルなし"}
               </h1>
-              <div className="mt-4 prose prose-invert max-w-none">
+              <div className="prose prose-invert mt-4 max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     // カスタムコンポーネントでスタイリング
                     h1: ({ children }) => (
-                      <h1 className="text-2xl font-bold mt-6 mb-4 text-[#F5F5F5]">
-                        {children}
-                      </h1>
+                      <h1 className="mb-4 mt-6 text-2xl font-bold text-[var(--color-text)]">{children}</h1>
                     ),
                     h2: ({ children }) => (
-                      <h2 className="text-xl font-semibold mt-5 mb-3 text-[#F5F5F5]">
-                        {children}
-                      </h2>
+                      <h2 className="mb-3 mt-5 text-xl font-semibold text-[var(--color-text)]">{children}</h2>
                     ),
                     h3: ({ children }) => (
-                      <h3 className="text-lg font-medium mt-4 mb-2 text-[#F5F5F5]">
-                        {children}
-                      </h3>
+                      <h3 className="mb-2 mt-4 text-lg font-medium text-[var(--color-text)]">{children}</h3>
                     ),
                     p: ({ children }) => {
                       const text = React.Children.toArray(children).join("");
@@ -548,49 +490,43 @@ export default function ArticleEditPage() {
                         return <VideoEmbedComponent text={text} />;
                       }
 
-                      return (
-                        <p className="mb-4 text-[#E5E5E5] leading-relaxed">
-                          {children}
-                        </p>
-                      );
+                      return <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">{children}</p>;
                     },
                     ul: ({ children }) => (
-                      <ul className="list-disc pl-6 mb-4 text-[#E5E5E5]">
-                        {children}
-                      </ul>
+                      <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">{children}</ul>
                     ),
                     ol: ({ children }) => (
-                      <ol className="list-decimal pl-6 mb-4 text-[#E5E5E5]">
-                        {children}
-                      </ol>
+                      <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">{children}</ol>
                     ),
                     li: ({ children }) => <li className="mb-1">{children}</li>,
                     blockquote: ({ children }) => (
-                      <blockquote className="border-l-4 border-[#7DB7E8] pl-4 italic text-[#D0D0D0] my-4">
+                      <blockquote className="my-4 border-l-4 border-[var(--color-accent)] pl-4 italic text-[#D0D0D0]">
                         {children}
                       </blockquote>
                     ),
                     code: ({ children, ...props }) => {
-                      const isInline = props.className?.includes('inline') || !props.className?.includes('language-');
+                      const isInline =
+                        props.className?.includes("inline") ||
+                        !props.className?.includes("language-");
                       return isInline ? (
-                        <code className="bg-[#1F1F1F] text-[#7DB7E8] px-1 py-0.5 rounded text-sm">
+                        <code className="rounded bg-[var(--color-bg)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
                           {children}
                         </code>
                       ) : (
-                        <code className="block bg-[#1F1F1F] text-[#F5F5F5] p-3 rounded-lg overflow-x-auto">
+                        <code className="block overflow-x-auto rounded-lg bg-[var(--color-bg)] p-3 text-[var(--color-text)]">
                           {children}
                         </code>
                       );
                     },
                     pre: ({ children }) => (
-                      <pre className="bg-[#1F1F1F] p-4 rounded-lg overflow-x-auto mb-4">
+                      <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-bg)] p-4">
                         {children}
                       </pre>
                     ),
                     a: ({ href, children }) => (
                       <a
                         href={href}
-                        className="text-[#7DB7E8] hover:text-[#6AA3D5] underline"
+                        className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -599,13 +535,14 @@ export default function ArticleEditPage() {
                     ),
                     img: ({ src, alt }) => {
                       // 動画ファイルかどうかをチェック
-                      const isVideo = src && typeof src === 'string' && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
-                      
+                      const isVideo =
+                        src && typeof src === "string" && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
+
                       if (isVideo) {
                         return (
                           <video
                             src={src}
-                            className="max-w-full h-auto rounded-lg my-4"
+                            className="my-4 h-auto max-w-full rounded-lg"
                             controls
                             preload="metadata"
                           >
@@ -613,29 +550,23 @@ export default function ArticleEditPage() {
                           </video>
                         );
                       }
-                      
+
                       return (
-                        <img
-                          src={src}
-                          alt={alt}
-                          className="max-w-full h-auto rounded-lg my-4"
-                        />
+                        <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />
                       );
                     },
                     table: ({ children }) => (
-                      <div className="overflow-x-auto my-4">
-                        <table className="min-w-full border border-gray-600">
-                          {children}
-                        </table>
+                      <div className="my-4 overflow-x-auto">
+                        <table className="min-w-full border border-gray-600">{children}</table>
                       </div>
                     ),
                     th: ({ children }) => (
-                      <th className="border border-gray-600 px-4 py-2 bg-[#1F1F1F] text-[#F5F5F5] font-semibold">
+                      <th className="border border-gray-600 bg-[var(--color-bg)] px-4 py-2 font-semibold text-[var(--color-text)]">
                         {children}
                       </th>
                     ),
                     td: ({ children }) => (
-                      <td className="border border-gray-600 px-4 py-2 text-[#E5E5E5]">
+                      <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
                         {children}
                       </td>
                     ),
@@ -651,12 +582,10 @@ export default function ArticleEditPage() {
 
       {/* 削除確認ダイアログ */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#2B2B2B] p-6 rounded-lg max-w-md w-full mx-4 border border-gray-600">
-            <h3 className="text-lg font-semibold mb-4 text-[#F5F5F5]">
-              記事を削除
-            </h3>
-            <p className="text-[#E5E5E5] mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg border border-gray-600 bg-[var(--color-surface)] p-6">
+            <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">記事を削除</h3>
+            <p className="mb-6 text-[var(--color-subtle-text)]">
               本当にこの記事を削除しますか？
               <br />
               この操作は取り消すことができません。
@@ -665,7 +594,7 @@ export default function ArticleEditPage() {
               <Button
                 onClick={() => setShowDeleteDialog(false)}
                 variant="outline"
-                className="bg-[#1F1F1F] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+                className="border-gray-600 bg-[var(--color-bg)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
                 disabled={deleting}
               >
                 キャンセル

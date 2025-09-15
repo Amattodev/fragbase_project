@@ -1,10 +1,4 @@
-import {
-  sqliteTable,
-  text,
-  integer,
-  uniqueIndex,
-  index,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // NextAuth.js用テーブル
 export const users = sqliteTable("user", {
@@ -15,26 +9,30 @@ export const users = sqliteTable("user", {
   image: text("image"),
 });
 
-export const accounts = sqliteTable("account", {
-  userId: text("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  provider: text("provider").notNull(),
-  providerAccountId: text("providerAccountId").notNull(),
-  refresh_token: text("refresh_token"),
-  access_token: text("access_token"),
-  expires_at: integer("expires_at"),
-  token_type: text("token_type"),
-  scope: text("scope"),
-  id_token: text("id_token"),
-  session_state: text("session_state"),
-}, (account) => ({
-  compoundKey: uniqueIndex("account_provider_providerAccountId_unique").on(
-    account.provider,
-    account.providerAccountId
-  ),
-}));
+export const accounts = sqliteTable(
+  "account",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => ({
+    compoundKey: uniqueIndex("account_provider_providerAccountId_unique").on(
+      account.provider,
+      account.providerAccountId,
+    ),
+  }),
+);
 
 export const sessions = sqliteTable("session", {
   sessionToken: text("sessionToken").primaryKey(),
@@ -44,16 +42,20 @@ export const sessions = sqliteTable("session", {
   expires: integer("expires", { mode: "timestamp" }).notNull(),
 });
 
-export const verificationTokens = sqliteTable("verificationToken", {
-  identifier: text("identifier").notNull(),
-  token: text("token").notNull(),
-  expires: integer("expires", { mode: "timestamp" }).notNull(),
-}, (vt) => ({
-  compoundKey: uniqueIndex("verificationToken_identifier_token_unique").on(
-    vt.identifier,
-    vt.token
-  ),
-}));
+export const verificationTokens = sqliteTable(
+  "verificationToken",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: integer("expires", { mode: "timestamp" }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: uniqueIndex("verificationToken_identifier_token_unique").on(
+      vt.identifier,
+      vt.token,
+    ),
+  }),
+);
 
 // ユーザープロフィール拡張テーブル
 export const userProfiles = sqliteTable("user_profiles", {
@@ -102,7 +104,7 @@ export const postTags = sqliteTable("post_tags", {
 
 export const postTagsUniqueIndex = uniqueIndex("post_tags_unique_index").on(
   postTags.postId,
-  postTags.tagId
+  postTags.tagId,
 );
 
 export const gameCategories = sqliteTable("game_categories", {
@@ -123,9 +125,10 @@ export const postGameCategories = sqliteTable("post_game_categories", {
   createdAt: integer("created_at").default(Date.now()),
 });
 
-export const postGameCategoriesUniqueIndex = uniqueIndex(
-  "post_game_categories_unique_index"
-).on(postGameCategories.postId, postGameCategories.gameCategoryId);
+export const postGameCategoriesUniqueIndex = uniqueIndex("post_game_categories_unique_index").on(
+  postGameCategories.postId,
+  postGameCategories.gameCategoryId,
+);
 
 export const postLikes = sqliteTable("post_likes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -138,7 +141,7 @@ export const postLikes = sqliteTable("post_likes", {
 
 export const postLikesUniqueIndex = uniqueIndex("post_likes_unique_index").on(
   postLikes.postId,
-  postLikes.userIdentifier
+  postLikes.userIdentifier,
 );
 
 export const postComments = sqliteTable("post_comments", {
@@ -164,12 +167,13 @@ export const postCommentLikes = sqliteTable("post_comment_likes", {
 });
 
 export const postCommentsParentIndex = index("post_comments_parent_index").on(
-  postComments.parentId
+  postComments.parentId,
 );
 
-export const postCommentLikesUniqueIndex = uniqueIndex(
-  "post_comment_likes_unique_index"
-).on(postCommentLikes.commentId, postCommentLikes.userIdentifier);
+export const postCommentLikesUniqueIndex = uniqueIndex("post_comment_likes_unique_index").on(
+  postCommentLikes.commentId,
+  postCommentLikes.userIdentifier,
+);
 
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -211,5 +215,5 @@ export const likes = sqliteTable("likes", {
 
 export const likesUniqueIndex = uniqueIndex("likes_unique_index").on(
   likes.settingId,
-  likes.userIdentifier
+  likes.userIdentifier,
 );

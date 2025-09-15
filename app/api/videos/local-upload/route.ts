@@ -1,18 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { existsSync } from "fs";
 
-// 最大ファイルサイズ: 200MB（エディタの制限に合わせる）
-const MAX_FILE_SIZE = 200 * 1024 * 1024;
+import { NextRequest, NextResponse } from "next/server";
 
-// 許可する動画フォーマット
-const ALLOWED_FORMATS = [
-  "video/mp4",
-  "video/webm",
-  "video/ogg",
-  "video/quicktime", // .mov
-];
+import { MAX_VIDEO_FILE_SIZE, ALLOWED_VIDEO_MIME_TYPES, DEFAULT_R2_PUBLIC_URL } from "@/constants/upload";
 
 export async function POST(request: NextRequest) {
   console.log("ローカル動画アップロード処理開始");
@@ -20,45 +10,36 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     console.log("FormData取得完了");
     const file = formData.get("file") as File;
-    console.log(
-      "ファイル取得:",
-      file ? `${file.name} (${file.size} bytes, ${file.type})` : "なし"
-    );
+    console.log("ファイル取得:", file ? `${file.name} (${file.size} bytes, ${file.type})` : "なし");
 
     if (!file) {
       console.error("ファイルが見つかりません");
       return NextResponse.json(
         { success: false, errors: [{ message: "ファイルが見つかりません" }] },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // ファイルサイズチェック
-    console.log(
-      `ファイルサイズチェック: ${file.size} bytes (制限: ${MAX_FILE_SIZE} bytes)`
-    );
-    if (file.size > MAX_FILE_SIZE) {
-      console.error(`ファイルサイズ超過: ${file.size} > ${MAX_FILE_SIZE}`);
+    console.log(`ファイルサイズチェック: ${file.size} bytes (制限: ${MAX_VIDEO_FILE_SIZE} bytes)`);
+    if (file.size > MAX_VIDEO_FILE_SIZE) {
+      console.error(`ファイルサイズ超過: ${file.size} > ${MAX_VIDEO_FILE_SIZE}`);
       return NextResponse.json(
         {
           success: false,
           errors: [
             {
-              message: `ファイルサイズは${
-                MAX_FILE_SIZE / 1024 / 1024
-              }MB以下にしてください`,
+              message: `ファイルサイズは${MAX_VIDEO_FILE_SIZE / 1024 / 1024}MB以下にしてください`,
             },
           ],
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // フォーマットチェック
-    console.log(
-      `フォーマットチェック: ${file.type} (許可: ${ALLOWED_FORMATS.join(", ")})`
-    );
-    if (!ALLOWED_FORMATS.includes(file.type)) {
+    console.log(`フォーマットチェック: ${file.type} (許可: ${ALLOWED_VIDEO_MIME_TYPES.join(", ")})`);
+    if (!ALLOWED_VIDEO_MIME_TYPES.includes(file.type as any)) {
       console.error(`サポートされていないフォーマット: ${file.type}`);
       return NextResponse.json(
         {
@@ -70,14 +51,13 @@ export async function POST(request: NextRequest) {
             },
           ],
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Cloudflare Workers環境ではR2バケットを使用
     const VIDEOS_BUCKET =
-      (globalThis as any)?.env?.VIDEOS_BUCKET ||
-      (globalThis as any)?.VIDEOS_BUCKET;
+      (globalThis as any)?.env?.VIDEOS_BUCKET || (globalThis as any)?.VIDEOS_BUCKET;
     console.log(`VIDEOS_BUCKET: ${VIDEOS_BUCKET ? "利用可能" : "利用不可"}`);
 
     if (VIDEOS_BUCKET) {
@@ -94,13 +74,13 @@ export async function POST(request: NextRequest) {
       // R2にアップロード
       console.log("R2アップロード開始");
       const arrayBuffer = await file.arrayBuffer();
-      
+
       const httpMetadata: any = {
         contentType: file.type || "video/mp4",
         cacheControl: "public, max-age=31536000",
         contentDisposition: "inline",
       };
-      
+
       await VIDEOS_BUCKET.put(key, arrayBuffer, {
         httpMetadata,
       });
@@ -110,7 +90,7 @@ export async function POST(request: NextRequest) {
       const r2PublicUrl =
         process.env.CLOUDFLARE_R2_PUBLIC_URL ||
         process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
-        "https://pub-26399b3d6caf4d29abf7fbd21e310972.r2.dev";
+        DEFAULT_R2_PUBLIC_URL;
       const videoUrl = `${r2PublicUrl}/${key}`;
 
       return NextResponse.json({
@@ -124,21 +104,12 @@ export async function POST(request: NextRequest) {
           size: file.size,
         },
       });
-    } else if (
-      typeof process !== "undefined" &&
-      process.env &&
-      typeof require !== "undefined"
-    ) {
+    } else if (typeof process !== "undefined" && process.env && typeof require !== "undefined") {
       // Node.js環境 - 通常の開発環境
       const { writeFile, mkdir } = await import("fs/promises");
       const { existsSync } = await import("fs");
 
-      const uploadsDir = path.join(
-        process.cwd(),
-        "public",
-        "uploads",
-        "videos"
-      );
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "videos");
       console.log(`アップロードディレクトリ: ${uploadsDir}`);
       if (!existsSync(uploadsDir)) {
         console.log("ディレクトリを作成します");
@@ -177,8 +148,7 @@ export async function POST(request: NextRequest) {
       // Cloudflare Workers環境 - R2バケットを使用
       console.log("Cloudflare Workers環境でR2バケットを使用");
 
-      const VIDEOS_BUCKET =
-        process.env.VIDEOS_BUCKET || (globalThis as any).VIDEOS_BUCKET;
+      const VIDEOS_BUCKET = process.env.VIDEOS_BUCKET || (globalThis as any).VIDEOS_BUCKET;
 
       if (!VIDEOS_BUCKET) {
         console.error("R2バケットが利用できません");
@@ -187,7 +157,7 @@ export async function POST(request: NextRequest) {
             success: false,
             errors: [{ message: "ストレージが利用できません" }],
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -201,13 +171,13 @@ export async function POST(request: NextRequest) {
       // R2にアップロード
       console.log("R2アップロード開始");
       const arrayBuffer = await file.arrayBuffer();
-      
+
       const httpMetadata: any = {
         contentType: file.type || "video/mp4",
         cacheControl: "public, max-age=31536000",
         contentDisposition: "inline",
       };
-      
+
       await VIDEOS_BUCKET.put(key, arrayBuffer, {
         httpMetadata,
       });
@@ -217,7 +187,7 @@ export async function POST(request: NextRequest) {
       const r2PublicUrl =
         process.env.CLOUDFLARE_R2_PUBLIC_URL ||
         process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
-        "https://pub-26399b3d6caf4d29abf7fbd21e310972.r2.dev";
+        DEFAULT_R2_PUBLIC_URL;
       const videoUrl = `${r2PublicUrl}/${key}`;
 
       return NextResponse.json({
@@ -239,7 +209,7 @@ export async function POST(request: NextRequest) {
         success: false,
         errors: [{ message: (error as Error).message }],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

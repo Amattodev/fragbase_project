@@ -3,20 +3,16 @@ import { ulid } from "ulid";
 // 日本語文字列を正規化する
 function normalizeText(text: string): string {
   return text
-    .replace(/[\u30A1-\u30F6]/g, (match) =>
-      String.fromCharCode(match.charCodeAt(0) - 0x60)
-    )
+    .replace(/[\u30A1-\u30F6]/g, (match) => String.fromCharCode(match.charCodeAt(0) - 0x60))
     .toLowerCase()
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) =>
-      String.fromCharCode(char.charCodeAt(0) - 0xfee)
-    );
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee));
 }
 
 export function toSlug(title: string): string {
   const normalized = normalizeText(title);
 
   const cleaned = normalized
-    .replace(/[^\w\s\u3040-\u309F\u30A0-\u30FF-]/g, "")
+    .replace(/[^\w\s\u3040-\u309F\u30A0-\u30FF\u4e00-\u9faf-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
@@ -28,7 +24,7 @@ export function toSlug(title: string): string {
 
 export function normalizeTitle(title: string): string {
   return normalizeText(title)
-    .replace(/[^\w\s\u3040-\u309F]/g, "")
+    .replace(/[^\w\s\u3040-\u309F\u4e00-\u9faf]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

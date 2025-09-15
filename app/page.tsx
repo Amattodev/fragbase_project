@@ -1,23 +1,14 @@
 "use client";
 
-import ServiceMessage from "@/components/ServiceMessage";
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import PostGrid from "@/components/PostGrid";
+import { useEffect, useState } from "react";
 
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  excerpt: string;
-  status: string;
-  slug: string;
-  createdAt: number;
-  updatedAt: number;
-  tags: { id: number; name: string; norm: string }[];
-  gameCategories: { id: number; name: string; displayName: string }[];
-}
+import PostGrid from "@/app/_components/PostGrid";
+import ServiceMessage from "@/app/_components/ServiceMessage";
+import { Button } from "@/components/ui/button";
+import { DEFAULT_POSTS_PAGE_SIZE } from "@/constants/pagination";
+import { getPublishedPosts } from "@/lib/services/posts";
+import type { Post } from "@/lib/services/posts";
 
 interface ApiResponse {
   ok: boolean;
@@ -54,30 +45,24 @@ export default function HomePage() {
     //   }
     // }, [searchParams]);
 
-    const fetchPublishedPosts = async () => {
+    const load = async () => {
       try {
-        const res = await fetch("/api/posts?status=published&limit=12");
-        const data = (await res.json()) as ApiResponse;
-
-        if (data.ok && data.posts) {
-          setPosts(data.posts);
-        } else {
-          setError(data.error || "記事の取得に失敗しました");
-        }
+        const items = await getPublishedPosts(DEFAULT_POSTS_PAGE_SIZE);
+        setPosts(items);
       } catch (err) {
-        setError("記事の取得中にエラーが発生しました");
         console.error("記事取得エラー:", err);
+        setError("記事の取得中にエラーが発生しました");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPublishedPosts();
+    load();
   }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
         <div>記事を読み込み中...</div>
       </div>
     );
@@ -85,9 +70,9 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#1F1F1F] text-[#F5F5F5] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
         <div className="text-center">
-          <div className="text-red-400 mb-4">{error}</div>
+          <div className="mb-4 text-red-400">{error}</div>
           <Button onClick={() => window.location.reload()}>再読み込み</Button>
         </div>
       </div>
@@ -105,14 +90,12 @@ export default function HomePage() {
 
       {/* 新着設定一覧 */}
       {/* <SettingCard searchHook={searchHook} /> */}
-      <main className="max-w-6xl mx-auto p-4">
+      <main className="mx-auto max-w-6xl p-4">
         {posts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400　text-lg mb-4">
-              公開記事がありません
-            </div>
+          <div className="py-12 text-center">
+            <div className="text-gray-400 text-lg mb-4">公開記事がありません</div>
             <Link href="/post">
-              <Button className="bg-[#7DB7E8] text-black hover:bg-[#6AA3D5]">
+              <Button className="bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]">
                 最初の記事を書く
               </Button>
             </Link>
@@ -120,7 +103,7 @@ export default function HomePage() {
         ) : (
           <>
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-2">公開記事</h2>
+              <h2 className="mb-2 text-xl font-semibold">公開記事</h2>
               <p className="text-gray-400">最新 の投稿をご覧ください</p>
             </div>
 

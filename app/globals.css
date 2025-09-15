@@ -3,6 +3,19 @@
 @tailwind utilities;
 
 :root {
+  /* App design tokens (hex-based) */
+  --color-bg: #1F1F1F;
+  --color-surface: #2B2B2B;
+  --color-surface-hover: #3B3B3B;
+  --color-text: #F5F5F5;
+  --color-muted: #BBBBBB;
+  --color-subtle-text: #E5E5E5;
+  --color-accent: #7DB7E8;
+  --color-accent-hover: #6AA3D5;
+  --color-danger: #FF6B6B;
+  --color-success: #22C55E;
+  --color-warning: #FFD580;
+
   --radius: 0.625rem;
   --background: white;
   --foreground: #0a0a0a;

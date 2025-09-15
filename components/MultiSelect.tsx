@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 
 interface Option {
@@ -29,10 +30,7 @@ export default function MultiSelect({
   // 外側クリックでドロップダウンを閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -77,21 +75,19 @@ export default function MultiSelect({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         variant="outline"
-        className="w-full justify-between bg-[#2B2B2B] border-gray-600 text-[#F5F5F5] hover:bg-[#3B3B3B]"
+        className="w-full justify-between border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
       >
         <span className="truncate">{getDisplayText()}</span>
-        <span className={`transition-transform ${isOpen ? "rotate-180" : ""}`}>
-          ▼
-        </span>
+        <span className={`transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
       </Button>
 
       {/* ドロップダウンリスト */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 bg-[#2B2B2B] border border-gray-600 rounded-md mt-1 z-20 max-h-60 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-md border border-gray-600 bg-[var(--color-surface)]">
           {options.map((option) => (
             <label
               key={option.id}
-              className="flex items-center px-3 py-2 hover:bg-[#3B3B3B] cursor-pointer"
+              className="flex cursor-pointer items-center px-3 py-2 hover:bg-[var(--color-surface-hover)]"
             >
               <input
                 type="checkbox"
@@ -99,7 +95,7 @@ export default function MultiSelect({
                 onChange={() => toggleOption(option.name)}
                 className="mr-2 rounded"
               />
-              <span className="text-[#F5F5F5]">{option.displayName}</span>
+              <span className="text-[var(--color-text)]">{option.displayName}</span>
             </label>
           ))}
         </div>
@@ -107,7 +103,7 @@ export default function MultiSelect({
 
       {/* 選択済みアイテムの表示 */}
       {selectedValues.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           {selectedValues.map((value) => {
             const option = options.find((opt) => opt.name === value);
             const displayName = option ? option.displayName : value;
@@ -115,13 +111,13 @@ export default function MultiSelect({
             return (
               <span
                 key={value}
-                className="bg-[#7DB7E8] text-black px-2 py-1 rounded-full text-sm flex items-center gap-1"
+                className="flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-1 text-sm text-black"
               >
                 {displayName}
                 <button
                   type="button"
                   onClick={() => removeOption(value)}
-                  className="hover:bg-black hover:text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-xs hover:bg-black hover:text-white"
                 >
                   ×
                 </button>
