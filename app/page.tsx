@@ -7,8 +7,8 @@ import PostGrid from "@/app/_components/PostGrid";
 import ServiceMessage from "@/app/_components/ServiceMessage";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_POSTS_PAGE_SIZE } from "@/constants/pagination";
-import { getPublishedPosts } from "@/lib/services/posts";
 import type { Post } from "@/lib/services/posts";
+import { getPublishedPosts } from "@/lib/services/posts";
 
 interface ApiResponse {
   ok: boolean;
@@ -24,27 +24,6 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    //urlクエリパラメータから検索条件を復元
-    {
-      /* memo０８１４：UIUXの改修に伴ってコメントアウト中 */
-    }
-    // const filters = {
-    //   game: searchParams.get("game") || undefined,
-    //   role: searchParams.get("role") || undefined,
-    //   character: searchParams.get("character") || undefined,
-    //   fpsExperience: searchParams.get("fpsExperience") || undefined,
-    // };
-
-    // 検索条件がある場合は条件付き検索、なければ全件取得
-    //   const hasFilters = Object.values(filters).some((value) => value);
-    //   if (hasFilters) {
-    //     searchHook.setFilters(filters);
-    //     searchHook.searchSettings(filters);
-    //   } else {
-    //     searchHook.searchSettings();
-    //   }
-    // }, [searchParams]);
-
     const load = async () => {
       try {
         const items = await getPublishedPosts(DEFAULT_POSTS_PAGE_SIZE);
@@ -84,16 +63,10 @@ export default function HomePage() {
       {/* サービスメッセージ */}
       <ServiceMessage />
 
-      {/* memo０８１４：UIUXの改修に伴ってコメントアウト中 */}
-      {/* フィルター検索エリア */}
-      {/* <FilterArea searchHook={searchHook} /> */}
-
-      {/* 新着設定一覧 */}
-      {/* <SettingCard searchHook={searchHook} /> */}
       <main className="mx-auto max-w-6xl p-4">
         {posts.length === 0 ? (
           <div className="py-12 text-center">
-            <div className="text-gray-400 text-lg mb-4">公開記事がありません</div>
+            <div className="mb-4 text-lg text-gray-400">公開記事がありません</div>
             <Link href="/post">
               <Button className="bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]">
                 最初の記事を書く

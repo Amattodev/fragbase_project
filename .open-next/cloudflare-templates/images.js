@@ -79,4 +79,4 @@ export function matchLocalPattern(pattern, url) {
 function getUrlErrorResponse() {
     return new Response(`"url" parameter is not allowed`, { status: 400 });
 }
- 
+/* eslint-enable no-var */

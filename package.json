@@ -14,7 +14,9 @@
     "format": "prettier --cache --write .",
     "format:check": "prettier --check .",
     "deploy": "node scripts/clean-uploads.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview:db": "wrangler d1 migrations apply fragbase --local",
     "preview": "node scripts/clean-uploads.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "preview:setup": "npm run preview:db && npm run preview",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
     "db:generate": "npx drizzle-kit generate",
     "db:push": "npx drizzle-kit migrate"

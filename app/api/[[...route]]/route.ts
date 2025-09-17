@@ -3,21 +3,14 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { getToken } from "next-auth/jwt";
 
-import { getDeviceLabel } from "@/constants/device";
-import { getDpiLabel } from "@/constants/dpi";
-import { getFpsExperienceLabel } from "@/constants/fpsExperience";
-import { getRoleLabel } from "@/constants/role";
 import {
-  comments,
   gameCategories,
-  likes,
   postCommentLikes,
   postComments,
   postGameCategories,
   postLikes,
   posts,
   postTags,
-  settings,
   tags,
   users,
 } from "@/db/schema";
@@ -38,20 +31,8 @@ import type { InferSelectModel } from "drizzle-orm";
 
 const app = new Hono().basePath("/api");
 
-type Setting = InferSelectModel<typeof settings>;
-type Comment = InferSelectModel<typeof comments>;
 type Tag = InferSelectModel<typeof tags>;
 type GameCategory = InferSelectModel<typeof gameCategories>;
-
-type GameSpecificSettings = {
-  sensitivity?: number;
-  aimSensitivity?: number;
-  reactcurve?: string;
-  deadZone?: string;
-  scopedSensitivity?: number;
-  aimAssist?: string;
-  [key: string]: any;
-};
 
 // 日本語ラベルを英語キーにマッピングする
 const mapLabelToKey = (game: string, label: string): string => {
@@ -241,6 +222,44 @@ app.post("/posts", async (c) => {
 
     const db = getDatabase();
 
+    // D1(Preview/Production) で稀に NextAuth のユーザー行がまだ無い場合がある。
+    // その場合 userId 外部キーで挿入が失敗するため、存在確認して無ければ null にフォールバックする。
+    let userIdToUse: string | null = token.sub;
+    const allowNullOwner = (process.env.POSTS_ALLOW_NULL_USER ?? "0") === "1";
+    try {
+      const existingUser = await db.select().from(users).where(eq(users.id, token.sub)).get();
+      if (!existingUser) {
+        if (allowNullOwner) {
+          console.warn(
+            "[PostCreate] user not found in DB for sub; fallback to null (POSTS_ALLOW_NULL_USER=1)",
+            token.sub,
+          );
+          userIdToUse = null;
+        } else {
+          console.warn(
+            "[PostCreate] user not found in DB for sub; rejecting create (set POSTS_ALLOW_NULL_USER=1 to allow)",
+            token.sub,
+          );
+          return c.json(
+            { ok: false, error: "ユーザー情報が初期化されていません。サインイン後に再度お試しください。" },
+            409,
+          );
+        }
+      }
+    } catch (e) {
+      if (allowNullOwner) {
+        // DB 到達前の例外はフォールバックで継続（下書き作成を止めない）
+        console.warn("[PostCreate] user lookup failed; fallback to null", e);
+        userIdToUse = null;
+      } else {
+        console.warn("[PostCreate] user lookup failed; rejecting create", e);
+        return c.json(
+          { ok: false, error: "ユーザー情報の確認に失敗しました。時間をおいて再試行してください。" },
+          500,
+        );
+      }
+    }
+
     // DrizzleAdapter にユーザー作成/リンクは委ねる（手動での upsert は行わない）
 
     const initialTitle = "無題の記事";
@@ -259,7 +278,7 @@ app.post("/posts", async (c) => {
         contentHtml,
         norm,
         status: "draft",
-        userId: token.sub, // ユーザーIDを追加
+        userId: userIdToUse, // ユーザーID（未登録の場合は null で回避）
         createdAt: now,
         updatedAt: now,
       })
@@ -270,13 +289,9 @@ app.post("/posts", async (c) => {
       post: result[0],
     });
   } catch (error) {
-    return c.json(
-      {
-        ok: false,
-        error: (error as Error).message,
-      },
-      500,
-    );
+    // 外部キー制約などの詳細をログに残し、クライアントには簡潔なメッセージを返す
+    console.error("[PostCreate] failed:", error);
+    return c.json({ ok: false, error: "下書きの作成に失敗しました" }, 500);
   }
 });
 
@@ -1238,7 +1253,9 @@ app.post("/settings/:id/likes", async (c) => {
     const userIdentifier = body.userIdentifier as string | undefined;
     if (!userIdentifier) return c.json({ ok: false, error: "userIdentifier is required" }, 400);
     const result = await toggleSettingLike(settingId, userIdentifier);
-    const message = (result as any).removed ? "Like removed successfully" : "Like added successfully";
+    const message = (result as any).removed
+      ? "Like removed successfully"
+      : "Like added successfully";
     return c.json({ ok: true, message });
   } catch (error) {
     return c.json({ ok: false, error: (error as Error).message }, 500);

@@ -19,6 +19,8 @@
 - `npm run build` / `npm start` — Production build and serve.
 - `npm run lint` — Lint with ESLint (Next.js config).
 - `npm run deploy` / `npm run preview` — Build + deploy/preview via OpenNext Cloudflare.
+- `npm run preview:db` — Apply D1 migrations to local preview DB.
+- `npm run preview:setup` — Apply D1 migrations, then start preview.
 - `npm run cf-typegen` — Generate Cloudflare env types.
 - `npm run db:generate` / `npm run db:push` — Drizzle generate/migrate.
 
@@ -45,5 +47,6 @@
 ## Security & Configuration Tips
 
 - Keep secrets in `.env` (local) and Cloudflare vars via `wrangler.jsonc`; never hard‑code.
+- For Wrangler local preview, copy `.dev.vars.example` to `.dev.vars` and set `NEXTAUTH_SECRET` and OAuth client secrets. `.dev.vars` is git-ignored.
 - Regenerate env types after changes: `npm run cf-typegen`.
 - `dev.db` is local only; do not commit real data.

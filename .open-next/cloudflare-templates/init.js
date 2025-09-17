@@ -6,7 +6,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import process from "node:process";
 import stream from "node:stream";
-
 // @ts-expect-error: resolved by wrangler build
 import * as nextEnvVars from "./next-env.mjs";
 const cloudflareContextALS = new AsyncLocalStorage();
@@ -115,4 +114,4 @@ function populateProcessEnv(url, env) {
      */
     process.env.__NEXT_PRIVATE_ORIGIN = url.origin;
 }
- 
+/* eslint-enable no-var */
