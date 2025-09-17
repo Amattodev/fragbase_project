@@ -50,7 +50,24 @@ export const processVideoEmbeds = (html: string): string => {
     /<img[^>]*alt="([^"]*)"[^>]*>\s*\[video-(\d+)\]/g,
     (match, altText, videoNum) => {
       const videoUrl = videoRefs[`video-${videoNum}`];
-      if (videoUrl && (videoUrl.includes("/uploads/videos/") || videoUrl.includes(".r2.dev"))) {
+      if (
+        videoUrl &&
+        (videoUrl.includes("/uploads/videos/") ||
+          videoUrl.includes(".r2.dev") ||
+          videoUrl.includes("/api/videos/") )
+      ) {
+        // r2.dev のURLは同一オリジンのストリーミングエンドポイントに置き換える
+        let finalUrl = videoUrl;
+        if (videoUrl.includes(".r2.dev")) {
+          try {
+            const u = new URL(videoUrl);
+            const idx = u.pathname.indexOf("/videos/");
+            if (idx >= 0) {
+              const fileName = u.pathname.substring(idx + "/videos/".length);
+              finalUrl = `/api/videos/file/${encodeURIComponent(fileName)}`;
+            }
+          } catch {}
+        }
         return `
           <div class="video-embed my-6">
             <video
@@ -59,9 +76,9 @@ export const processVideoEmbeds = (html: string): string => {
               class="rounded-lg shadow-lg"
               preload="metadata"
             >
-              <source src="${videoUrl}" type="video/mp4">
-              <source src="${videoUrl}" type="video/webm">
-              <source src="${videoUrl}" type="video/ogg">
+              <source src="${finalUrl}" type="video/mp4">
+              <source src="${finalUrl}" type="video/webm">
+              <source src="${finalUrl}" type="video/ogg">
               動画を再生するにはHTML5対応のブラウザが必要です。
             </video>
           </div>

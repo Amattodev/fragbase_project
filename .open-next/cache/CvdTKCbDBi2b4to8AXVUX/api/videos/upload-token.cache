@@ -1,1 +1,0 @@
-{"type":"route","meta":{"status":200,"headers":{"content-type":"application/json","x-next-cache-tags":"_N_T_/layout,_N_T_/api/layout,_N_T_/api/videos/layout,_N_T_/api/videos/upload-token/layout,_N_T_/api/videos/upload-token/route,_N_T_/api/videos/upload-token"}},"body":"{\"ok\":true,\"uploadUrl\":\"/api/videos/upload\",\"isLocal\":false}"}

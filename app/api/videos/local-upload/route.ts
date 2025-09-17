@@ -2,7 +2,7 @@ import path from "path";
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { MAX_VIDEO_FILE_SIZE, ALLOWED_VIDEO_MIME_TYPES, DEFAULT_R2_PUBLIC_URL } from "@/constants/upload";
+import { MAX_VIDEO_FILE_SIZE, ALLOWED_VIDEO_MIME_TYPES } from "@/constants/upload";
 
 export async function POST(request: NextRequest) {
   console.log("ローカル動画アップロード処理開始");
@@ -56,8 +56,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Cloudflare Workers環境ではR2バケットを使用
-    const VIDEOS_BUCKET =
-      (globalThis as any)?.env?.VIDEOS_BUCKET || (globalThis as any)?.VIDEOS_BUCKET;
+    const ctx =
+      (globalThis as any)[Symbol.for("__cloudflare_context__")] ||
+      (globalThis as any)[Symbol.for("__cloudflare-context__")] ||
+      (globalThis as any);
+    const VIDEOS_BUCKET: R2Bucket | undefined = (ctx?.env?.VIDEOS_BUCKET || ctx?.VIDEOS_BUCKET) as
+      | R2Bucket
+      | undefined;
     console.log(`VIDEOS_BUCKET: ${VIDEOS_BUCKET ? "利用可能" : "利用不可"}`);
 
     if (VIDEOS_BUCKET) {
@@ -86,12 +91,8 @@ export async function POST(request: NextRequest) {
       });
       console.log("R2アップロード完了");
 
-      // R2のパブリックURLを構築
-      const r2PublicUrl =
-        process.env.CLOUDFLARE_R2_PUBLIC_URL ||
-        process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
-        DEFAULT_R2_PUBLIC_URL;
-      const videoUrl = `${r2PublicUrl}/${key}`;
+      // 同一オリジン配信に切り替え（preview/prodともにR2をAPI経由でストリーミング）
+      const videoUrl = `/api/videos/file/${encodeURIComponent(fileName)}`;
 
       return NextResponse.json({
         success: true,
@@ -146,9 +147,15 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Cloudflare Workers環境 - R2バケットを使用
-      console.log("Cloudflare Workers環境でR2バケットを使用");
+      console.log("Cloudflare Workers環境でR2バケットを使用 (fallback path)");
 
-      const VIDEOS_BUCKET = process.env.VIDEOS_BUCKET || (globalThis as any).VIDEOS_BUCKET;
+      const ctx2 =
+        (globalThis as any)[Symbol.for("__cloudflare_context__")] ||
+        (globalThis as any)[Symbol.for("__cloudflare-context__")] ||
+        (globalThis as any);
+      const VIDEOS_BUCKET: R2Bucket | undefined = (ctx2?.env?.VIDEOS_BUCKET || ctx2?.VIDEOS_BUCKET) as
+        | R2Bucket
+        | undefined;
 
       if (!VIDEOS_BUCKET) {
         console.error("R2バケットが利用できません");
@@ -183,12 +190,8 @@ export async function POST(request: NextRequest) {
       });
       console.log("R2アップロード完了");
 
-      // R2のパブリックURLを構築
-      const r2PublicUrl =
-        process.env.CLOUDFLARE_R2_PUBLIC_URL ||
-        process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
-        DEFAULT_R2_PUBLIC_URL;
-      const videoUrl = `${r2PublicUrl}/${key}`;
+      // 同一オリジン配信に切り替え
+      const videoUrl = `/api/videos/file/${encodeURIComponent(fileName)}`;
 
       return NextResponse.json({
         success: true,
