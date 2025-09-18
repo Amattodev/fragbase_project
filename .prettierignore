@@ -1,0 +1,10 @@
+.next
+node_modules
+dist
+build
+coverage
+.open-next
+dev.db
+*.sqlite
+*.log
+

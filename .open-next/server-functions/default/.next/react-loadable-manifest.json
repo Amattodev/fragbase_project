@@ -1,1 +1,9 @@
-{}
+{
+  "app/articles/_components/Editor.tsx -> @uiw/react-md-editor": {
+    "id": 2638,
+    "files": [
+      "static/css/7e8ee521833d42b2.css",
+      "static/chunks/638.1cc3468964c61f2d.js"
+    ]
+  }
+}

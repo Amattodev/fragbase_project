@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="mt-6 text-center text-sm text-[#BBBBBB]">
+    <footer className="mt-6 text-center text-sm text-[var(--color-muted)]">
       <div className="mb-4 space-x-6">
         <a
           href="https://polarized-help-c1e.notion.site/239debc6a1db8092a0d6c41251f43806"

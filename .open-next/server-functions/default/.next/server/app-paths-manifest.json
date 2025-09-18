@@ -1,9 +1,17 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/page": "app/page.js",
-  "/settings/[id]/page": "app/settings/[id]/page.js",
+  "/api/images/local-upload/route": "app/api/images/local-upload/route.js",
   "/api/systems/ping/route": "app/api/systems/ping/route.js",
-  "/post/page": "app/post/page.js",
+  "/api/videos/file/[filename]/route": "app/api/videos/file/[filename]/route.js",
+  "/api/videos/local-upload/route": "app/api/videos/local-upload/route.js",
+  "/api/videos/upload/route": "app/api/videos/upload/route.js",
+  "/api/videos/upload-token/route": "app/api/videos/upload-token/route.js",
+  "/articles/[id]/edit/page": "app/articles/[id]/edit/page.js",
+  "/articles/[id]/page": "app/articles/[id]/page.js",
+  "/page": "app/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/post/page": "app/post/page.js",
+  "/auth/signin/page": "app/auth/signin/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/[[...route]]/route": "app/api/[[...route]]/route.js"
 }

@@ -1,8 +1,11 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
-import Header from "@/components/HeaderPart";
+
 import Footer from "@/components/FooterPart";
+import Header from "@/components/HeaderPart";
+import SessionProvider from "@/components/SessionProvider";
+
+import type { Metadata } from "next";
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -70,10 +73,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-13FE8LDX23"
-        ></script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-13FE8LDX23"></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -86,14 +86,14 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${inter.className} min-h-screen bg-[#1F1F1F] text-[#F5F5F5] p-4`}
-      >
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main>{children}</main>
-          <Footer />
-        </div>
+      <body className={`${inter.className} min-h-screen bg-[var(--color-bg)] p-4 text-[var(--color-text)]`}>
+        <SessionProvider>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </div>
+        </SessionProvider>
       </body>
     </html>
   );

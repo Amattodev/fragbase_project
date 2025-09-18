@@ -1,64 +1,89 @@
 "use client";
 
-import FilterArea from "@/components/FilterArea";
-import SettingCard from "@/components/SettingCard";
-import ServiceMessage from "@/components/ServiceMessage";
-import { useSettingSearch } from "@/features/settings/useSettingSearch";
-import { useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-function HomeContent() {
-  const searchParams = useSearchParams();
-  const searchHook = useSettingSearch();
+import PostGrid from "@/app/_components/PostGrid";
+import ServiceMessage from "@/app/_components/ServiceMessage";
+import { Button } from "@/components/ui/button";
+import { DEFAULT_POSTS_PAGE_SIZE } from "@/constants/pagination";
+import type { Post } from "@/lib/services/posts";
+import { getPublishedPosts } from "@/lib/services/posts";
+
+interface ApiResponse {
+  ok: boolean;
+  posts?: Post[];
+  error?: string;
+}
+
+export default function HomePage() {
+  // const searchParams = useSearchParams();
+  // const searchHook = useSettingSearch();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    //urlクエリパラメータから検索条件を復元
-    const filters = {
-      game: searchParams.get("game") || undefined,
-      role: searchParams.get("role") || undefined,
-      character: searchParams.get("character") || undefined,
-      fpsExperience: searchParams.get("fpsExperience") || undefined,
+    const load = async () => {
+      try {
+        const items = await getPublishedPosts(DEFAULT_POSTS_PAGE_SIZE);
+        setPosts(items);
+      } catch (err) {
+        console.error("記事取得エラー:", err);
+        setError("記事の取得中にエラーが発生しました");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // 検索条件がある場合は条件付き検索、なければ全件取得
-    const hasFilters = Object.values(filters).some((value) => value);
-    if (hasFilters) {
-      searchHook.setFilters(filters);
-      searchHook.searchSettings(filters);
-    } else {
-      searchHook.searchSettings();
-    }
-  }, [searchParams]);
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div>記事を読み込み中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="text-center">
+          <div className="mb-4 text-red-400">{error}</div>
+          <Button onClick={() => window.location.reload()}>再読み込み</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       {/* サービスメッセージ */}
       <ServiceMessage />
 
-      {/* フィルター検索エリア */}
-      <FilterArea searchHook={searchHook} />
-
-      {/* 新着設定一覧 */}
-      <SettingCard searchHook={searchHook} />
-
-      {/* TODO 0704 診断コンテンツが必要な時に追加する */}
-      {/* 診断コンテンツバナー */}
-      {/* <section className="flex justify-center">
-        <div className="bg-[#2B2B2B] p-6 rounded-xl text-center w-full ">
-          <h2 className="text-xl font-semibold mb-4">自分に合ったFPS設定を診断しよう！</h2>
-          <div className="flex justify-center">
-            <Button className="bg-[#7DB7E8] hover:bg-[#6AA7D8] text-black px-10 py-3 rounded-full">診断をはじめる</Button>
+      <main className="mx-auto max-w-6xl p-4">
+        {posts.length === 0 ? (
+          <div className="py-12 text-center">
+            <div className="mb-4 text-lg text-gray-400">公開記事がありません</div>
+            <Link href="/post">
+              <Button className="bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]">
+                最初の記事を書く
+              </Button>
+            </Link>
           </div>
-        </div>
-      </section> */}
-    </>
-  );
-}
+        ) : (
+          <>
+            <div className="mb-8">
+              <h2 className="mb-2 text-xl font-semibold">公開記事</h2>
+              <p className="text-gray-400">最新 の投稿をご覧ください</p>
+            </div>
 
-export default function Home() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <HomeContent />
-    </Suspense>
+            <PostGrid posts={posts} />
+          </>
+        )}
+      </main>
+    </>
   );
 }

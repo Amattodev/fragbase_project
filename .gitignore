@@ -43,3 +43,7 @@ next-env.d.ts
 # OpenNext
 # /.open-next
 
+# Uploads (local development only)
+/.open-next/assets/uploads/
+/public/uploads/
+
