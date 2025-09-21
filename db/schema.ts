@@ -7,6 +7,8 @@ export const users = sqliteTable("user", {
   email: text("email").unique(),
   emailVerified: integer("emailVerified", { mode: "timestamp" }),
   image: text("image"),
+  // URL用のハンドル（小文字で保存）: 新規作成時はNULL許可、後で付与
+  username: text("username").unique(),
 });
 
 export const accounts = sqliteTable(
@@ -212,6 +214,29 @@ export const likes = sqliteTable("likes", {
   userIdentifier: text("user_identifier").notNull(),
   createdAt: integer("created_at").default(Date.now()),
 });
+
+// フォロー関係
+export const follows = sqliteTable(
+  "follows",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at").default(Date.now()),
+  },
+  (t) => ({
+    followsUnique: uniqueIndex("follows_follower_following_unique").on(
+      t.followerId,
+      t.followingId,
+    ),
+    followerIdx: index("follows_follower_id_idx").on(t.followerId),
+    followingIdx: index("follows_following_id_idx").on(t.followingId),
+  }),
+);
 
 export const likesUniqueIndex = uniqueIndex("likes_unique_index").on(
   likes.settingId,
