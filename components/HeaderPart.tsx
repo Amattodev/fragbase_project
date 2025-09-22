@@ -136,6 +136,14 @@ export default function Header() {
                     <Settings size={16} className="mr-2" />
                     設定
                   </Link>
+                  <Link
+                    href="/settings/games"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <Settings size={16} className="mr-2" />
+                    ゲーム設定
+                  </Link>
                   <hr className="my-1" />
                   <button
                     onClick={() => {

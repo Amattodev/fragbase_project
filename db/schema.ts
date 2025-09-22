@@ -242,3 +242,30 @@ export const likesUniqueIndex = uniqueIndex("likes_unique_index").on(
   likes.settingId,
   likes.userIdentifier,
 );
+
+// User Game Profiles
+export const userGameProfiles = sqliteTable(
+  "user_game_profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    gameSlug: text("game_slug").notNull(),
+    // Optional fields (all nullable)
+    rank: text("rank"),
+    mainRole: text("main_role"),
+    mainCharacter: text("main_character"),
+    platform: text("platform"),
+    region: text("region"),
+    ingameId: text("ingame_id"),
+    notes: text("notes"),
+    createdAt: integer("created_at").default(Date.now()),
+    updatedAt: integer("updated_at").default(Date.now()),
+  },
+  (t) => ({
+    uniq: uniqueIndex("user_game_profiles_user_game_unique").on(t.userId, t.gameSlug),
+    userIdx: index("user_game_profiles_user_idx").on(t.userId),
+    gameIdx: index("user_game_profiles_game_idx").on(t.gameSlug),
+  }),
+);

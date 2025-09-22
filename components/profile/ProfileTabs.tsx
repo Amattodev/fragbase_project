@@ -2,22 +2,31 @@
 import Link from "next/link";
 import { useSelectedLayoutSegments } from "next/navigation";
 
-export function ProfileTabs({ username }: { username: string }) {
+export type GameTab = { slug: string; nameEn: string };
+
+export function ProfileTabs({ username, gameTabs }: { username: string; gameTabs?: GameTab[] }) {
   const segs = useSelectedLayoutSegments();
-  const current = segs[2] || ""; // /profile/[username]/(here)
   const base = `/profile/${username}`;
-  const tabs = [
-    { key: "", label: "Articles", href: base },
-    { key: "likes", label: "Likes", href: `${base}/likes` },
-    { key: "games", label: "Games", href: `${base}/games` },
-  ];
+  const isLikes = segs[2] === 'likes';
+  const isGame = segs[2] === 'games';
+  const currentGameSlug = isGame ? (segs[3] || '') : '';
   return (
-    <nav className="border-b mb-6">
-      <ul className="flex gap-6 text-sm">
-        {tabs.map((t) => (
-          <li key={t.key}>
-            <Link className={`inline-block py-3 ${current === t.key ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={t.href}>
-              {t.label}
+    <nav className="border-b mb-6 overflow-x-auto">
+      <ul className="flex gap-6 text-sm whitespace-nowrap">
+        <li>
+          <Link className={`inline-block py-3 ${!isLikes && !isGame ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={base}>
+            Articles
+          </Link>
+        </li>
+        <li>
+          <Link className={`inline-block py-3 ${isLikes ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={`${base}/likes`}>
+            Likes
+          </Link>
+        </li>
+        {gameTabs?.map((g) => (
+          <li key={g.slug}>
+            <Link className={`inline-block py-3 ${isGame && currentGameSlug === g.slug ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={`${base}/games/${g.slug}`}>
+              {g.nameEn}
             </Link>
           </li>
         ))}
