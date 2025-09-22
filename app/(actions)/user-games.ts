@@ -51,7 +51,10 @@ export async function deleteUserGameProfileAction(slug: string) {
 function extractPatch(formData: FormData) {
   const get = (k: string) => (formData.get(k)?.toString().trim() || "").slice(0, 200);
   const v = (s: string) => (s ? s : null);
+  const getAll = (k: string) => formData.getAll(k).map((x) => x.toString()).map((s) => s.trim()).filter(Boolean);
+  const mainCharacters = getAll('mainCharacters[]').slice(0, 3);
   return {
+    // legacy passthroughs (not used on new form, kept for compatibility)
     rank: v(get("rank")),
     mainRole: v(get("mainRole")),
     mainCharacter: v(get("mainCharacter")),
@@ -59,6 +62,11 @@ function extractPatch(formData: FormData) {
     region: v(get("region")),
     ingameId: v(get("ingameId")),
     notes: (formData.get("notes")?.toString() || "").slice(0, 1000) || null,
+    // new fields
+    currentRank: v(get('currentRank')),
+    highestRank: v(get('highestRank')),
+    accountId: v(get('accountId')),
+    accountUsername: v(get('accountUsername')),
+    mainCharacters: mainCharacters.length ? mainCharacters : null,
   };
 }
-

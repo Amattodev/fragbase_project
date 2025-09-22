@@ -14,12 +14,34 @@ export default async function UserGameProfileViewPage({ params }: { params: { us
     <div className="space-y-2 py-4">
       <h2 className="text-lg font-semibold">{game.nameEn}</h2>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {profile.rank && <li><Label>Rank</Label><Val>{profile.rank}</Val></li>}
-        {profile.mainRole && <li><Label>Main Role</Label><Val>{profile.mainRole}</Val></li>}
-        {profile.mainCharacter && <li><Label>Main Character</Label><Val>{profile.mainCharacter}</Val></li>}
-        {profile.platform && <li><Label>Platform</Label><Val>{profile.platform}</Val></li>}
-        {profile.region && <li><Label>Region</Label><Val>{profile.region}</Val></li>}
-        {profile.ingameId && <li><Label>In-game ID</Label><Val>{profile.ingameId}</Val></li>}
+        {(profile.currentRank || profile.highestRank) && (
+          <li>
+            <Label>Rank</Label>
+            <Val>
+              {profile.currentRank ? `Current: ${profile.currentRank}` : null}
+              {profile.currentRank && profile.highestRank ? ' / ' : ''}
+              {profile.highestRank ? `Peak: ${profile.highestRank}` : null}
+            </Val>
+          </li>
+        )}
+        {(profile.accountUsername || profile.accountId) && (
+          <li>
+            <Label>Account</Label>
+            <Val>
+              {profile.accountUsername ? `Username: ${profile.accountUsername}` : null}
+              {profile.accountUsername && profile.accountId ? ' / ' : ''}
+              {profile.accountId ? `ID: ${profile.accountId}` : null}
+            </Val>
+          </li>
+        )}
+        {!!(profile.mainCharacters && profile.mainCharacters.length) && (
+          <li className="sm:col-span-2">
+            <Label>Main Characters</Label>
+            <Val>
+              {profile.mainCharacters!.join(', ')}
+            </Val>
+          </li>
+        )}
       </ul>
       {profile.notes && (
         <div className="mt-2">
@@ -37,4 +59,3 @@ function Label({ children }: { children: React.ReactNode }) {
 function Val({ children }: { children: React.ReactNode }) {
   return <div className="text-sm">{children}</div>;
 }
-

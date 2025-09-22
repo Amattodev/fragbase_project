@@ -7,6 +7,7 @@ import { GAMES, getGameBySlug } from '@/constants/games';
 export type UserGameProfile = {
   userId: string;
   gameSlug: string;
+  // Legacy fields (kept for compatibility)
   rank?: string | null;
   mainRole?: string | null;
   mainCharacter?: string | null;
@@ -14,6 +15,12 @@ export type UserGameProfile = {
   region?: string | null;
   ingameId?: string | null;
   notes?: string | null;
+  // New fields
+  currentRank?: string | null;
+  highestRank?: string | null;
+  accountId?: string | null;
+  accountUsername?: string | null;
+  mainCharacters?: string[] | null; // parsed from JSON
   createdAt: number;
   updatedAt: number;
 };
@@ -30,7 +37,7 @@ export async function listUserGameProfiles(userId: string) {
     .where(eq(userGameProfiles.userId, userId))
     .orderBy(desc(userGameProfiles.createdAt));
   // sort by game English name alphabetically for UI
-  return rows.sort((a, b) => {
+  return rows.map(row => withParsedMainCharacters(row)).sort((a, b) => {
     const ga = GAMES.find((g) => g.slug === a.gameSlug)?.nameEn || a.gameSlug;
     const gb = GAMES.find((g) => g.slug === b.gameSlug)?.nameEn || b.gameSlug;
     return ga.localeCompare(gb);
@@ -39,11 +46,12 @@ export async function listUserGameProfiles(userId: string) {
 
 export async function getUserGameProfile(userId: string, slug: string) {
   const db = getDatabase();
-  return db
+  const row = await db
     .select()
     .from(userGameProfiles)
     .where(and(eq(userGameProfiles.userId, userId), eq(userGameProfiles.gameSlug, slug)))
     .get();
+  return row ? withParsedMainCharacters(row) : undefined;
 }
 
 export async function createUserGameProfile(
@@ -62,6 +70,7 @@ export async function createUserGameProfile(
   await db.insert(userGameProfiles).values({
     userId,
     gameSlug: slug,
+    // legacy
     rank: patch.rank ?? null,
     mainRole: patch.mainRole ?? null,
     mainCharacter: patch.mainCharacter ?? null,
@@ -69,6 +78,12 @@ export async function createUserGameProfile(
     region: patch.region ?? null,
     ingameId: patch.ingameId ?? null,
     notes: patch.notes ?? null,
+    // new
+    currentRank: patch.currentRank ?? null,
+    highestRank: patch.highestRank ?? null,
+    accountId: patch.accountId ?? null,
+    accountUsername: patch.accountUsername ?? null,
+    mainCharacters: patch.mainCharacters ? JSON.stringify(patch.mainCharacters) : null,
     createdAt: now,
     updatedAt: now,
   });
@@ -87,6 +102,7 @@ export async function updateUserGameProfile(
   await db
     .update(userGameProfiles)
     .set({
+      // legacy
       rank: patch.rank ?? null,
       mainRole: patch.mainRole ?? null,
       mainCharacter: patch.mainCharacter ?? null,
@@ -94,6 +110,12 @@ export async function updateUserGameProfile(
       region: patch.region ?? null,
       ingameId: patch.ingameId ?? null,
       notes: patch.notes ?? null,
+      // new
+      currentRank: patch.currentRank ?? null,
+      highestRank: patch.highestRank ?? null,
+      accountId: patch.accountId ?? null,
+      accountUsername: patch.accountUsername ?? null,
+      mainCharacters: patch.mainCharacters ? JSON.stringify(patch.mainCharacters) : null,
       updatedAt: Date.now(),
     })
     .where(and(eq(userGameProfiles.userId, userId), eq(userGameProfiles.gameSlug, slug)));
@@ -106,3 +128,13 @@ export async function deleteUserGameProfile(userId: string, slug: string) {
     .where(and(eq(userGameProfiles.userId, userId), eq(userGameProfiles.gameSlug, slug)));
 }
 
+function withParsedMainCharacters<T extends { mainCharacters?: string | null }>(row: T): Omit<T, 'mainCharacters'> & { mainCharacters?: string[] | null } {
+  let parsed: string[] | null = null;
+  if (row.mainCharacters) {
+    try {
+      const arr = JSON.parse(row.mainCharacters);
+      if (Array.isArray(arr)) parsed = arr.filter((x) => typeof x === 'string').slice(0, 3);
+    } catch {}
+  }
+  return { ...(row as any), mainCharacters: parsed };
+}

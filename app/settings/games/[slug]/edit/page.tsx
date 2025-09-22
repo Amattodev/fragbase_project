@@ -32,13 +32,11 @@ export default async function EditGameProfilePage({ params }: { params: { slug: 
         mode="edit"
         slug={params.slug}
         initial={{
-          rank: profile.rank ?? undefined,
-          mainRole: profile.mainRole ?? undefined,
-          mainCharacter: profile.mainCharacter ?? undefined,
-          platform: profile.platform ?? undefined,
-          region: profile.region ?? undefined,
-          ingameId: profile.ingameId ?? undefined,
-          notes: profile.notes ?? undefined,
+          currentRank: profile.currentRank ?? undefined,
+          highestRank: profile.highestRank ?? undefined,
+          accountId: profile.accountId ?? undefined,
+          accountUsername: profile.accountUsername ?? undefined,
+          mainCharacters: profile.mainCharacters ?? [],
         }}
         onSave={onSave}
         onDelete={onDelete}
@@ -46,4 +44,3 @@ export default async function EditGameProfilePage({ params }: { params: { slug: 
     </div>
   );
 }
-

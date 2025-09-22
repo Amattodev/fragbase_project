@@ -253,6 +253,7 @@ export const userGameProfiles = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     gameSlug: text("game_slug").notNull(),
     // Optional fields (all nullable)
+    // Legacy/initial fields
     rank: text("rank"),
     mainRole: text("main_role"),
     mainCharacter: text("main_character"),
@@ -260,6 +261,13 @@ export const userGameProfiles = sqliteTable(
     region: text("region"),
     ingameId: text("ingame_id"),
     notes: text("notes"),
+    // New fields (2025-09):
+    currentRank: text("current_rank"),
+    highestRank: text("highest_rank"),
+    accountId: text("account_id"),
+    accountUsername: text("account_username"),
+    // JSON string array of up to 3 character names in usage order
+    mainCharacters: text("main_characters"),
     createdAt: integer("created_at").default(Date.now()),
     updatedAt: integer("updated_at").default(Date.now()),
   },
