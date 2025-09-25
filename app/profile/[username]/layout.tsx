@@ -22,11 +22,11 @@ export default async function UserLayout({ children, params }: { children: React
     <div className="container mx-auto px-4 py-6">
       <ProfileHeader
         viewerId={session?.user?.id}
-        user={{ id: user.id, name: user.name, image: user.image, username: user.username, bio: user.bio, socialLinks: user.socialLinks as any }}
+        user={{ id: user.id, name: user.name, image: user.image ?? "", username: user.username!, bio: user.bio, socialLinks: user.socialLinks as any }}
         counters={counters}
         isFollowing={following}
       />
-      <ProfileTabs username={user.username} gameTabs={tabs} />
+      <ProfileTabs username={user.username!} gameTabs={tabs} />
       <div>{children}</div>
     </div>
   );

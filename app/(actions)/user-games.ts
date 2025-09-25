@@ -15,9 +15,9 @@ async function requireSession() {
 
 async function getUsername(userId: string) {
   const db = getDatabase();
-  const row = await db.select({ username: users.username }).from(users).where(eq(users.id, userId)).get();
+  const row = await db.select().from(users).where(eq(users.id, userId)).get();
   if (!row?.username) throw new Error("username_required");
-  return row.username;
+  return row.username!;
 }
 
 export async function createUserGameProfileAction(slug: string, formData: FormData) {

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   follows,
   gameCategories,
@@ -52,7 +52,7 @@ export async function getUserByUsername(username: string) {
     id: u.id,
     name: u.name ?? null,
     image: u.image ?? null,
-    username: u.username,
+    username: u.username!,
     bio: profile?.bio ?? null,
     socialLinks: social,
   } as const;
@@ -60,25 +60,21 @@ export async function getUserByUsername(username: string) {
 
 export async function getProfileCounters(userId: string) {
   const db = getDatabase();
-  const [{ value: followerCount }] = (await db
-    .select({ value: count() })
-    .from(follows)
-    .where(eq(follows.followingId, userId))) as unknown as { value: number }[];
+  const followerCount = (
+    await db.select().from(follows).where(eq(follows.followingId, userId))
+  ).length;
 
-  const [{ value: publishedCount }] = (await db
-    .select({ value: count() })
-    .from(posts)
-    .where(and(eq(posts.userId, userId), eq(posts.status, "published")))) as unknown as {
-    value: number;
-  }[];
+  const publishedCount = (
+    await db.select().from(posts).where(and(eq(posts.userId, userId), eq(posts.status, "published")))
+  ).length;
 
-  const [{ value: totalPostLikes }] = (await db
-    .select({ value: count() })
-    .from(postLikes)
-    .leftJoin(posts, eq(posts.id, postLikes.postId))
-    .where(and(eq(posts.userId, userId), eq(posts.status, "published")))) as unknown as {
-    value: number;
-  }[];
+  const totalPostLikes = (
+    await db
+      .select()
+      .from(postLikes)
+      .leftJoin(posts, eq(posts.id, postLikes.postId))
+      .where(and(eq(posts.userId, userId), eq(posts.status, "published")))
+  ).length;
 
   return { followerCount, publishedCount, totalPostLikes } as const;
 }
@@ -88,30 +84,40 @@ async function hydratePosts(base: { id: number; title: string; content: string; 
   const ids = base.map((p) => p.id);
   if (ids.length === 0) return [];
 
-  const tagRows = await db
-    .select({ postId: postTags.postId, id: tags.id, name: tags.name, norm: tags.norm })
+  // Tag relations and details (2-step to avoid select({...}) typing)
+  const tagRels = await db
+    .select()
     .from(postTags)
-    .leftJoin(tags, eq(tags.id, postTags.tagId))
     .where(inArray(postTags.postId, ids));
-
-  const catRows = await db
-    .select({ postId: postGameCategories.postId, id: gameCategories.id, name: gameCategories.name, displayName: gameCategories.displayName })
-    .from(postGameCategories)
-    .leftJoin(gameCategories, eq(gameCategories.id, postGameCategories.gameCategoryId))
-    .where(inArray(postGameCategories.postId, ids));
-
+  const tagIds = Array.from(new Set(tagRels.map((r) => r.tagId))).filter((v): v is number => v != null);
+  const tagRows = tagIds.length ? await db.select().from(tags).where(inArray(tags.id, tagIds)) : [];
+  const tagById = new Map<number, { id: number; name: string; norm: string }>();
+  for (const t of tagRows) tagById.set(t.id!, { id: t.id!, name: t.name!, norm: t.norm! });
   const tagMap = new Map<number, { id: number; name: string; norm: string }[]>();
-  for (const row of tagRows) {
-    const arr = tagMap.get(row.postId) ?? [];
-    if (row.id != null) arr.push({ id: row.id, name: row.name!, norm: row.norm! });
-    tagMap.set(row.postId, arr);
+  for (const rel of tagRels) {
+    const arr = tagMap.get(rel.postId) ?? [];
+    const t = rel.tagId != null ? tagById.get(rel.tagId) : undefined;
+    if (t) arr.push(t);
+    tagMap.set(rel.postId, arr);
   }
 
+  // Game category relations and details (2-step)
+  const catRels = await db
+    .select()
+    .from(postGameCategories)
+    .where(inArray(postGameCategories.postId, ids));
+  const catIds = Array.from(new Set(catRels.map((r) => r.gameCategoryId))).filter((v): v is number => v != null);
+  const catRows = catIds.length
+    ? await db.select().from(gameCategories).where(inArray(gameCategories.id, catIds))
+    : [];
+  const catById = new Map<number, { id: number; name: string; displayName: string }>();
+  for (const c of catRows) catById.set(c.id!, { id: c.id!, name: c.name!, displayName: c.displayName! });
   const catMap = new Map<number, { id: number; name: string; displayName: string }[]>();
-  for (const row of catRows) {
-    const arr = catMap.get(row.postId) ?? [];
-    if (row.id != null) arr.push({ id: row.id, name: row.name!, displayName: row.displayName! });
-    catMap.set(row.postId, arr);
+  for (const rel of catRels) {
+    const arr = catMap.get(rel.postId) ?? [];
+    const c = rel.gameCategoryId != null ? catById.get(rel.gameCategoryId) : undefined;
+    if (c) arr.push(c);
+    catMap.set(rel.postId, arr);
   }
 
   return base.map<Post>((p) => ({
@@ -144,11 +150,11 @@ export async function listAuthoredPosts(userId: string, limit = 12, offset = 0):
 export async function listLikedPosts(targetUserId: string, limit = 12, offset = 0): Promise<Post[]> {
   const db = getDatabase();
   const liked = await db
-    .select({ postId: postLikes.postId })
+    .select()
     .from(postLikes)
     .where(eq(postLikes.userIdentifier, targetUserId))
     .limit(500);
-  const postIds = liked.map((l) => l.postId);
+  const postIds = liked.map((l) => l.postId).filter((v): v is number => v != null);
   if (postIds.length === 0) return [];
   const rows = await db
     .select()

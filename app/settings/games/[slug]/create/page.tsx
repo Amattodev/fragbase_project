@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getGameBySlug } from "@/constants/games";
 import { getUserGameProfile } from "@/lib/services/server/userGames";
 import { GameProfileForm } from "@/components/games/GameProfileForm";
@@ -27,5 +27,3 @@ export default async function CreateGameProfilePage({ params }: { params: { slug
     </div>
   );
 }
-
-import { notFound } from "next/navigation";
