@@ -121,7 +121,7 @@ export default function Header() {
               {showDropdown && (
                 <div className="absolute right-0 z-50 mt-2 w-48 rounded-md border bg-white py-1 shadow-lg">
                   <Link
-                    href="/profile"
+                    href="/me"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
@@ -129,12 +129,20 @@ export default function Header() {
                     マイプロフィール
                   </Link>
                   <Link
-                    href="/profile/settings"
+                    href="/settings/profile"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
                     <Settings size={16} className="mr-2" />
                     設定
+                  </Link>
+                  <Link
+                    href="/settings/games"
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    <Settings size={16} className="mr-2" />
+                    ゲーム設定
                   </Link>
                   <hr className="my-1" />
                   <button

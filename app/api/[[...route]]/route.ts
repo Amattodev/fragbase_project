@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, like } from "drizzle-orm";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 
 import {
   gameCategories,
@@ -696,7 +697,8 @@ app.post("/posts/:id/likes", async (c) => {
     }
 
     const body = await c.req.json();
-    const userIdentifier = body.userIdentifier;
+    const session = await auth();
+    const userIdentifier = (session?.user as any)?.id ?? body.userIdentifier;
 
     if (!userIdentifier) {
       return c.json({ ok: false, error: "User identifier is required" }, 400);
@@ -1042,7 +1044,8 @@ app.post("/posts/:postId/comments/:commentId/likes", async (c) => {
     }
 
     const body = await c.req.json();
-    const userIdentifier = body.userIdentifier;
+    const session = await auth();
+    const userIdentifier = (session?.user as any)?.id ?? body.userIdentifier;
 
     if (!userIdentifier) {
       return c.json({ ok: false, error: "User identifier is required" }, 400);

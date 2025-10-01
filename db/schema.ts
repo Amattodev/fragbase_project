@@ -7,6 +7,8 @@ export const users = sqliteTable("user", {
   email: text("email").unique(),
   emailVerified: integer("emailVerified", { mode: "timestamp" }),
   image: text("image"),
+  // URL用のハンドル（小文字で保存）: 新規作成時はNULL許可、後で付与
+  username: text("username").unique(),
 });
 
 export const accounts = sqliteTable(
@@ -213,7 +215,65 @@ export const likes = sqliteTable("likes", {
   createdAt: integer("created_at").default(Date.now()),
 });
 
+// フォロー関係
+export const follows = sqliteTable(
+  "follows",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at").default(Date.now()),
+  },
+  (t) => ({
+    followsUnique: uniqueIndex("follows_follower_following_unique").on(
+      t.followerId,
+      t.followingId,
+    ),
+    followerIdx: index("follows_follower_id_idx").on(t.followerId),
+    followingIdx: index("follows_following_id_idx").on(t.followingId),
+  }),
+);
+
 export const likesUniqueIndex = uniqueIndex("likes_unique_index").on(
   likes.settingId,
   likes.userIdentifier,
+);
+
+// User Game Profiles
+export const userGameProfiles = sqliteTable(
+  "user_game_profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    gameSlug: text("game_slug").notNull(),
+    // Optional fields (all nullable)
+    // Legacy/initial fields
+    rank: text("rank"),
+    mainRole: text("main_role"),
+    mainCharacter: text("main_character"),
+    platform: text("platform"),
+    region: text("region"),
+    ingameId: text("ingame_id"),
+    notes: text("notes"),
+    // New fields (2025-09):
+    currentRank: text("current_rank"),
+    highestRank: text("highest_rank"),
+    accountId: text("account_id"),
+    accountUsername: text("account_username"),
+    // JSON string array of up to 3 character names in usage order
+    mainCharacters: text("main_characters"),
+    createdAt: integer("created_at").default(Date.now()),
+    updatedAt: integer("updated_at").default(Date.now()),
+  },
+  (t) => ({
+    uniq: uniqueIndex("user_game_profiles_user_game_unique").on(t.userId, t.gameSlug),
+    userIdx: index("user_game_profiles_user_idx").on(t.userId),
+    gameIdx: index("user_game_profiles_game_idx").on(t.gameSlug),
+  }),
 );

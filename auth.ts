@@ -5,6 +5,8 @@ import { authConfig } from "@/auth.config";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { getDatabase } from "@/lib/server/db";
 
+const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDatabase(), {
     usersTable: users,
@@ -13,5 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: verificationTokens,
   } as any),
   session: { strategy: "jwt" },
+  // 明示的にシークレットを設定（環境変数がない場合はエラーに）
+  ...(secret ? { secret } : {}),
   ...authConfig,
 });

@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 import Twitch from "next-auth/providers/twitch";
 
 import { accounts, users } from "@/db/schema";
+import { ensureProfileRowAndUsernameForNewUser } from "@/lib/services/server/users";
 import { getDatabase } from "@/lib/server/db";
 
 import type { NextAuthConfig } from "next-auth";
@@ -154,6 +155,14 @@ export const authConfig = {
     async createUser(message: any) {
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] events.createUser", message?.user?.id);
+      }
+      try {
+        const id = message?.user?.id as string | undefined;
+        if (id) {
+          await ensureProfileRowAndUsernameForNewUser(id, message?.user?.name, message?.user?.email);
+        }
+      } catch (e) {
+        console.log("[AuthDebug] events.createUser handler error", e);
       }
     },
     async session(message: any) {

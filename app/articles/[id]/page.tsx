@@ -7,16 +7,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
-import { getPost, getPostLikesCount, togglePostLike } from "@/lib/services/posts";
 import type { Post } from "@/lib/services/posts";
+import { getPost, getPostLikesCount, togglePostLike } from "@/lib/services/posts";
 
 import CommentSection from "../_components/CommentsSection";
-
-interface ApiResponse {
-  ok: boolean;
-  post?: Post;
-  error?: string;
-}
 
 export default function ArticlePage() {
   const params = useParams();
@@ -531,10 +525,14 @@ export default function ArticlePage() {
                 </h1>
               ),
               h2: ({ children }) => (
-                <h2 className="mb-3 mt-6 text-xl font-semibold text-[var(--color-text)]">{children}</h2>
+                <h2 className="mb-3 mt-6 text-xl font-semibold text-[var(--color-text)]">
+                  {children}
+                </h2>
               ),
               h3: ({ children }) => (
-                <h3 className="mb-2 mt-5 text-lg font-medium text-[var(--color-text)]">{children}</h3>
+                <h3 className="mb-2 mt-5 text-lg font-medium text-[var(--color-text)]">
+                  {children}
+                </h3>
               ),
               p: ({ children }) => {
                 const text = React.Children.toArray(children).join("");
@@ -542,13 +540,17 @@ export default function ArticlePage() {
                 if (text.match(/\[(youtube|twitch|tiktok|x):[^\]]+\]/)) {
                   return <VideoEmbedComponent text={text} />;
                 }
-                return <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">{children}</p>;
+                return (
+                  <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">{children}</p>
+                );
               },
               ul: ({ children }) => (
                 <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">{children}</ul>
               ),
               ol: ({ children }) => (
-                <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">{children}</ol>
+                <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">
+                  {children}
+                </ol>
               ),
               li: ({ children }) => <li className="mb-1">{children}</li>,
               blockquote: ({ children }) => (
@@ -570,7 +572,9 @@ export default function ArticlePage() {
                 );
               },
               pre: ({ children }) => (
-                <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">{children}</pre>
+                <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">
+                  {children}
+                </pre>
               ),
               a: ({ href, children }) => (
                 <a
@@ -644,7 +648,9 @@ export default function ArticlePage() {
                 </th>
               ),
               td: ({ children }) => (
-                <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">{children}</td>
+                <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
+                  {children}
+                </td>
               ),
             }}
           >
