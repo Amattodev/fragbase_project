@@ -1,0 +1,12 @@
+User-approved spec for Rankings (2025-10-01):
+- Period/Timezone: Weekly (previous week), AllTime; JST, week = Mon 00:00 to Sun 23:59:59. Update at Mon 00:10 JST.
+- Article Ranking:
+  - Weekly: Only posts published in previous week; score = likes received within that week. Sort: score desc, then published time desc, then post.id asc. Link to /articles/[id].
+  - AllTime: All published posts; score = total likes received (active likes). Same tiebreak.
+- User Ranking:
+  - Weekly metrics: posts published count; post comments count (on published posts); likes received on user’s published posts (likes created in week). Sort by chosen metric desc, tie-break by latest event time for that metric desc, then user.id asc. Link to /profile/[username].
+  - AllTime metrics: cumulative versions of above.
+- Visibility: Never show non-public/deleted posts; if post/user becomes unavailable after snapshot, hide at read time.
+- Display: Article = title, user(display name), published date, likes total. User = display name + avatar, posts, comments, likes received. Page size = 20.
+- Self-like allowed; canceled likes excluded.
+- Routing confirmed: /articles/[id], /profile/[username].

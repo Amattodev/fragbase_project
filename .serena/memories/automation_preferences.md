@@ -1,5 +1,1 @@
-# Automation Preferences
-
-- Do NOT auto-run `npm run -s lint` (or any lint/build/test) on each Codex instruction.
-- Only run lint/tests/build when explicitly requested or when you explicitly ask for approval and I confirm.
-- Keep pre-commit hooks as-is unless I ask to change them.
+When adding scheduled tasks, prefer Cloudflare Cron if deployed on Workers; otherwise use GitHub Actions or Vercel Cron to call an internal rebuild endpoint every Monday 00:10 JST. Store top N=200 in snapshot tables and page 20 items per API call.

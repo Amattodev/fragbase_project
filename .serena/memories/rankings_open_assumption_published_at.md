@@ -1,0 +1,1 @@
+Assumption: posts.createdAt is treated as publish time for weekly article inclusion. If drafts are created earlier and published later, consider adding posts.publishedAt to reflect actual publish time.

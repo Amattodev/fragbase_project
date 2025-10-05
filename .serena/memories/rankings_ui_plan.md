@@ -1,0 +1,1 @@
+Add /rankings page: tabs (記事/ユーザー), toggle (Weekly/AllTime), users metric selector (投稿/コメント/いいね). Show week label like 2025/09/29–2025/10/05 JST. Each row links to /articles/[id] or /profile/[username]. Page size 20 with cursor/offset. Empty states per list. Use existing design tokens and table components.

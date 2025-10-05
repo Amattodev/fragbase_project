@@ -1,0 +1,1 @@
+Before finishing rankings work: (1) Migrations applied locally and remotely; (2) Batch job tested for both periods; (3) API endpoints return correct schema and page; (4) UI navigates to /articles/[id] and /profile/[username]; (5) Visibility guard hides non-public/deleted; (6) Performance verified with indexes; (7) Monitoring/logs for batch failures; (8) Backfill top N present.

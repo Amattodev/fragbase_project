@@ -64,6 +64,22 @@ export default function HomePage() {
       <ServiceMessage />
 
       <main className="mx-auto max-w-6xl p-4">
+        {/* Top Tabs: Trending / Ranking */}
+        <div className="mb-6 flex gap-4 border-b border-gray-200">
+          <Link
+            href="/"
+            className="-mb-px border-b-2 border-black px-2 pb-2 text-sm font-medium"
+          >
+            Trending
+          </Link>
+          <Link
+            href="/rankings"
+            className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
+          >
+            Ranking
+          </Link>
+        </div>
+
         {posts.length === 0 ? (
           <div className="py-12 text-center">
             <div className="mb-4 text-lg text-gray-400">公開記事がありません</div>

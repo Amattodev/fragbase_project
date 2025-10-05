@@ -1,0 +1,1 @@
+Pending confirmations before implementation: (1) Is posts.createdAt equal to publish time? If not, add publishedAt. (2) Preferred scheduling mechanism (Cloudflare Cron vs external cron calling endpoint). (3) Top-N size to persist (default 200) acceptable?

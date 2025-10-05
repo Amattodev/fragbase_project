@@ -1,0 +1,1 @@
+Rows link to /articles/[id] and /profile/[username]. Use anchor elements inside table cells for accessibility. Open in same tab.
