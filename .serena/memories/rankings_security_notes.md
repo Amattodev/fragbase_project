@@ -1,0 +1,1 @@
+Protect internal rebuild endpoint with a secret token; ensure API only returns public data; enforce offset/limit bounds; ensure stable ordering to prevent pagination drift.

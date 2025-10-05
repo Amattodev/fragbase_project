@@ -59,6 +59,42 @@ export const verificationTokens = sqliteTable(
   }),
 );
 
+// Rankings tables
+export const rankingSnapshots = sqliteTable("ranking_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  kind: text("kind").notNull(), // 'article' | 'user'
+  metric: text("metric").notNull(), // 'likes' | 'posts' | 'comments'
+  period: text("period").notNull(), // 'weekly' | 'alltime'
+  windowStart: integer("window_start"),
+  windowEnd: integer("window_end").notNull(),
+  computedAt: integer("computed_at").default(Date.now()).notNull(),
+});
+
+export const rankingEntries = sqliteTable("ranking_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  snapshotId: integer("snapshot_id")
+    .notNull()
+    .references(() => rankingSnapshots.id, { onDelete: "cascade" }),
+  rank: integer("rank").notNull(),
+  postId: integer("post_id"),
+  userId: text("user_id"),
+  likesCount: integer("likes_count").default(0),
+  postsCount: integer("posts_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+});
+
+// Indexes for rankings
+export const rankingSnapshotsUniqueIndex = uniqueIndex("idx_ranking_snapshots_unique").on(
+  rankingSnapshots.kind,
+  rankingSnapshots.metric,
+  rankingSnapshots.period,
+  rankingSnapshots.windowEnd,
+);
+
+export const rankingEntriesSnapshotRankIndex = index(
+  "idx_ranking_entries_snapshot_rank",
+).on(rankingEntries.snapshotId, rankingEntries.rank);
+
 // ユーザープロフィール拡張テーブル
 export const userProfiles = sqliteTable("user_profiles", {
   id: integer("id").primaryKey({ autoIncrement: true }),

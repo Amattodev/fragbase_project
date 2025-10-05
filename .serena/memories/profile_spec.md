@@ -1,1 +1,1 @@
-Spec document added at docs/specs/profile.md with MVP profile feature: public profile at /u/[username]; counters (followers, total received likes, published posts); tabs (authored posts, liked posts, game titles placeholder); editable profile at /settings/profile (username/bio/social links: X/YouTube/Twitch/Steam/Discord + extensible); follow feature included; username policy and validation; API and server-action outline; UX/SEO notes. Update this file as requirements evolve.
+Profiles: /profile/[username]; uses users.name (display name) and users.image (avatar).

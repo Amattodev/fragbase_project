@@ -1,0 +1,1 @@
+Always filter out non-public/deleted posts at read time from snapshot results. For users, require users.username not null; join to users and user_profiles to render display name and avatar; fallback placeholders allowed.

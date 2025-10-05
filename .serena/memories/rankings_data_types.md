@@ -1,0 +1,1 @@
+Snapshot types: kind: 'article'|'user'; metric: 'likes'|'posts'|'comments'; period: 'weekly'|'alltime'; window_start/end: number(ms); computed_at: number(ms). Entry: rank: number; post_id?: number; user_id?: string; counts: {likes_count, posts_count, comments_count}.

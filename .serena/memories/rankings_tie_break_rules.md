@@ -1,0 +1,1 @@
+Articles: likes desc, publish time desc (createdAt for now), post.id asc. Users: chosen metric desc, latest-event time for that metric desc (post.createdAt / comment.createdAt / like.createdAt), user.id asc.
