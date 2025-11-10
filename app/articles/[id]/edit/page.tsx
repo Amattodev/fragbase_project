@@ -7,13 +7,8 @@ import remarkGfm from "remark-gfm";
 import MultiSelect from "@/components/MultiSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  getPost,
-  getGameCategories,
-  searchTags,
-  updatePost as updatePostService,
-  deletePost as deletePostService,
-} from "@/lib/services/posts";
+import { getPost, searchTags, updatePost as updatePostService, deletePost as deletePostService } from "@/lib/services/posts";
+import { getGamesCatalog } from "@/lib/services/games/catalog";
 import type { Post } from "@/lib/services/posts";
 
 import EditorComponent from "../../_components/Editor";
@@ -45,10 +40,9 @@ export default function ArticleEditPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<{ id: number; name: string }[]>([]);
-  const [gameCategories, setGameCategories] = useState<string[]>([]);
-  const [availableGameCategories, setAvailableGameCategories] = useState<
-    { id: number; name: string; displayName: string }[]
-  >([]);
+  // ゲーム選択は slug ベース
+  const [gameSlugs, setGameSlugs] = useState<string[]>([]);
+  const [availableGames, setAvailableGames] = useState<{ id: number; name: string; displayName: string }[]>([]);
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const articleId = params.id as string;
@@ -63,13 +57,15 @@ export default function ArticleEditPage() {
         setContent(data.content);
         setStatus(data.status as "draft" | "published");
         setTags(data.tags?.map((tag) => tag.name) || []);
-        setGameCategories(data.gameCategories?.map((gc) => gc.name) || []);
+        // 初期は名前ベース。後で games カタログに合わせて slug へ変換
+        const initialNames = data.gameCategories?.map((gc) => gc.name) || [];
+        setGameSlugs(initialNames); // 一旦保持（変換はカタログ取得後）
         setOriginalContent({
           title: data.title,
           content: data.content,
           status: data.status as "published" | "draft",
           tags: data.tags?.map((tag) => tag.name) || [],
-          gameCategories: data.gameCategories?.map((gc) => gc.name) || [],
+          gameCategories: initialNames,
         });
         setHasUnsavedChanges(false);
       } catch (error) {
@@ -85,18 +81,33 @@ export default function ArticleEditPage() {
     }
   }, [articleId, router]);
 
-  // ゲームカテゴリ一覧の取得
+  // ゲーム一覧の取得（constants/games.ts をソースとする）
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadGames = async () => {
       try {
-        const cats = await getGameCategories();
-        setAvailableGameCategories(cats);
+        const games = await getGamesCatalog();
+        // MultiSelect の Option 形式に変換（value=name=slug, displayName=label）
+        const opts = games.map((g, idx) => ({ id: idx + 1, name: g.slug, displayName: g.name }));
+        setAvailableGames(opts);
       } catch (error) {
-        console.error("ゲームカテゴリ取得エラー:", error);
+        console.error("ゲーム一覧取得エラー:", error);
       }
     };
-    loadCategories();
+    loadGames();
   }, []);
+
+  // カタログ取得後、既存の name 群を slug に変換
+  useEffect(() => {
+    if (availableGames.length === 0 || gameSlugs.length === 0) return;
+    // 既に slug の形（/ を含まない英小文字-連結）ならそのまま、そうでなければ name->slug 変換
+    const toSlug = (val: string) => {
+      // 候補: displayName一致 → そのslug、なければそのまま
+      const hit = availableGames.find((g) => g.displayName.toLowerCase() === val.toLowerCase());
+      return hit ? hit.name : val;
+    };
+    setGameSlugs((prev) => prev.map(toSlug));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableGames.length]);
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
@@ -105,7 +116,7 @@ export default function ArticleEditPage() {
         content !== originalContent.content ||
         status !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
+        JSON.stringify(gameSlugs) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -116,7 +127,7 @@ export default function ArticleEditPage() {
         newContent !== originalContent.content ||
         status !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
+        JSON.stringify(gameSlugs) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -127,7 +138,7 @@ export default function ArticleEditPage() {
         content !== originalContent.content ||
         newStatus !== originalContent.status ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(gameCategories) !== JSON.stringify(originalContent.gameCategories),
+        JSON.stringify(gameSlugs) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -164,13 +175,13 @@ export default function ArticleEditPage() {
     }
   };
 
-  const handleGameCategoryChange = (newGameCategories: string[]) => {
-    setGameCategories(newGameCategories);
+  const handleGameSlugsChange = (newSlugs: string[]) => {
+    setGameSlugs(newSlugs);
     setHasUnsavedChanges(
       title !== originalContent.title ||
         content !== originalContent.content ||
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
-        JSON.stringify(newGameCategories) !== JSON.stringify(originalContent.gameCategories),
+        JSON.stringify(newSlugs) !== JSON.stringify(originalContent.gameCategories),
     );
   };
 
@@ -185,12 +196,13 @@ export default function ArticleEditPage() {
         content,
         status,
         tags,
-        gameCategories,
+        gameSlugs,
       });
       if (data) {
         console.log("保存成功");
         setPost(data);
-        setOriginalContent({ title, content, status, tags, gameCategories });
+        // 保存後の比較用に、originalContent 側も slug ベースで保持
+        setOriginalContent({ title, content, status, tags, gameCategories: gameSlugs });
         setHasUnsavedChanges(false);
       } else {
         alert("保存に失敗しました");
@@ -201,7 +213,7 @@ export default function ArticleEditPage() {
     } finally {
       setSaving(false);
     }
-  }, [post, title, content, tags, gameCategories, status, saving]);
+  }, [post, title, content, tags, gameSlugs, status, saving]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -442,9 +454,9 @@ export default function ArticleEditPage() {
             <div>
               <label className="mb-2 block text-sm font-medium">ゲームタイトル（複数選択可）</label>
               <MultiSelect
-                options={availableGameCategories}
-                selectedValues={gameCategories}
-                onChange={handleGameCategoryChange}
+                options={availableGames}
+                selectedValues={gameSlugs}
+                onChange={handleGameSlugsChange}
                 placeholder="ゲームタイトルを選択"
                 className="w-full"
               />

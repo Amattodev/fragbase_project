@@ -6,7 +6,8 @@ export async function updatePost(
   id: number,
   payload: Partial<Pick<Post, 'title' | 'content' | 'status'>> & {
     tags?: string[];
-    gameCategories?: string[];
+    gameCategories?: string[]; // backward compat (names)
+    gameSlugs?: string[]; // preferred
   },
 ): Promise<Post> {
   const res = await fetch(`/api/posts/${id}`, {
@@ -45,4 +46,3 @@ export async function createPost(): Promise<Post> {
   };
   return normalized;
 }
-

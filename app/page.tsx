@@ -46,7 +46,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <ServiceMessage />
 
       <main className="mx-auto max-w-6xl p-4">
-        {/* Top Tabs: Trending / Ranking */}
+        {/* Top Tabs: Trending / Ranking / Explore */}
         <div className="mb-6 flex gap-4 border-b border-gray-200">
           <Link href="/" className="-mb-px border-b-2 border-black px-2 pb-2 text-sm font-medium">
             Trending
@@ -56,6 +56,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
           >
             Ranking
+          </Link>
+          <Link
+            href="/explore"
+            className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
+          >
+            Explore
           </Link>
         </div>
 

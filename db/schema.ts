@@ -149,6 +149,8 @@ export const gameCategories = sqliteTable("game_categories", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
   displayName: text("display_name").notNull(),
+  // 2025-11: constants/games.ts の slug と揃えるための列（ユニーク）
+  slug: text("slug"),
   createdAt: integer("created_at").default(Date.now()),
 });
 
