@@ -91,13 +91,19 @@ export default async function RankingsPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      {/* Top Tabs: Trending / Ranking / Explore */}
+      {/* Top Tabs: Trending / Timeline / Ranking / Explore */}
       <div className="mb-4 flex gap-4 border-b border-gray-200">
         <Link
           href="/"
           className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
         >
           Trending
+        </Link>
+        <Link
+          href="/timeline"
+          className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
+        >
+          Timeline
         </Link>
         <Link
           href="/rankings"

@@ -46,10 +46,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <ServiceMessage />
 
       <main className="mx-auto max-w-6xl p-4">
-        {/* Top Tabs: Trending / Ranking / Explore */}
+        {/* Top Tabs: Trending / Timeline / Ranking / Explore */}
         <div className="mb-6 flex gap-4 border-b border-gray-200">
           <Link href="/" className="-mb-px border-b-2 border-black px-2 pb-2 text-sm font-medium">
             Trending
+          </Link>
+          <Link
+            href="/timeline"
+            className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300"
+          >
+            Timeline
           </Link>
           <Link
             href="/rankings"
@@ -90,7 +96,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <section className="mb-10">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Recent</h2>
-                <Link href="/recent" className="text-sm text-gray-500 hover:underline">
+                <Link href="/timeline" className="text-sm text-gray-500 hover:underline">
                   もっと見る
                 </Link>
               </div>

@@ -1,0 +1,3 @@
+export const TIMELINE_DEFAULT_PAGE_SIZE = 24;
+export const TIMELINE_MAX_PAGE_SIZE = 50;
+
