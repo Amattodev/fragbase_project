@@ -622,7 +622,7 @@ app.get("/posts", async (c) => {
     const offset = Number(c.req.query("offset")) || 0;
     const game = c.req.query("game") || "";
 
-    let result;
+    let result: PostRow[] = [];
 
     if (status == "published") {
       // optional game filter (prefer slug match; fallback to LIKE for legacy data)
@@ -634,7 +634,7 @@ app.get("/posts", async (c) => {
           .get();
         if (bySlug) {
           const rel = await db
-            .select({ postId: postGameCategories.postId })
+            .select()
             .from(postGameCategories)
             .where(eq(postGameCategories.gameCategoryId, bySlug.id))
             .all();
@@ -666,7 +666,7 @@ app.get("/posts", async (c) => {
             result = [];
           } else {
             const rel = await db
-              .select({ postId: postGameCategories.postId })
+              .select()
               .from(postGameCategories)
               .where(inArray(postGameCategories.gameCategoryId, catIds))
               .all();
@@ -713,7 +713,7 @@ app.get("/posts", async (c) => {
           .get();
         if (bySlug) {
           const rel = await db
-            .select({ postId: postGameCategories.postId })
+            .select()
             .from(postGameCategories)
             .where(eq(postGameCategories.gameCategoryId, bySlug.id))
             .all();
@@ -744,7 +744,7 @@ app.get("/posts", async (c) => {
             result = [];
           } else {
             const rel = await db
-              .select({ postId: postGameCategories.postId })
+              .select()
               .from(postGameCategories)
               .where(inArray(postGameCategories.gameCategoryId, catIds))
               .all();
@@ -886,7 +886,7 @@ app.post("/posts/:id/likes", async (c) => {
 
     const body = await c.req.json();
     const session = await auth();
-    const userIdentifier = (session?.user as any)?.id ?? body.userIdentifier;
+    const userIdentifier = session?.user?.id ?? body.userIdentifier;
 
     if (!userIdentifier) {
       return c.json({ ok: false, error: "User identifier is required" }, 400);
