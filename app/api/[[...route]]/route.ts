@@ -1,9 +1,11 @@
-import { and, desc, eq, isNull, like, inArray, or } from "drizzle-orm";
+import { auth } from "@/auth";
+import { and, desc, eq, inArray, isNull, like, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { getToken } from "next-auth/jwt";
-import { auth } from "@/auth";
 
+import { resolveGameCategoryCandidates } from "@/constants/gameCategoryMap";
+import { GAMES } from "@/constants/games";
 import {
   gameCategories,
   postCommentLikes,
@@ -15,8 +17,6 @@ import {
   tags,
   users,
 } from "@/db/schema";
-import { GAMES } from "@/constants/games";
-import { resolveGameCategoryCandidates } from "@/constants/gameCategoryMap";
 import { markdownToHtml } from "@/lib/markdown";
 import { getDatabase } from "@/lib/server/db";
 import {
@@ -219,7 +219,10 @@ app.post("/posts", async (c) => {
             token.sub,
           );
           return c.json(
-            { ok: false, error: "ユーザー情報が初期化されていません。サインイン後に再度お試しください。" },
+            {
+              ok: false,
+              error: "ユーザー情報が初期化されていません。サインイン後に再度お試しください。",
+            },
             409,
           );
         }
@@ -232,7 +235,10 @@ app.post("/posts", async (c) => {
       } else {
         console.warn("[PostCreate] user lookup failed; rejecting create", e);
         return c.json(
-          { ok: false, error: "ユーザー情報の確認に失敗しました。時間をおいて再試行してください。" },
+          {
+            ok: false,
+            error: "ユーザー情報の確認に失敗しました。時間をおいて再試行してください。",
+          },
           500,
         );
       }
@@ -279,15 +285,16 @@ app.get("/tags", async (c) => {
     const db = getDatabase();
     const query = c.req.query("q") || "";
 
-    let result: PostRow[] = [];
+    let result: { id: number; name: string }[] = [];
 
     if (query) {
-      result = await db
+      const rows = await db
         .select()
         .from(tags)
         .where(like(tags.name, `%${query}%`))
         .limit(10)
         .all();
+      result = rows.map((t) => ({ id: t.id!, name: t.name! }));
     } else {
       const allTags = await db.select().from(tags).all();
       const withCounts = await Promise.all(
@@ -303,7 +310,10 @@ app.get("/tags", async (c) => {
           };
         }),
       );
-      result = withCounts.sort((a, b) => b.count - a.count).slice(0, 20);
+      result = withCounts
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20)
+        .map((t) => ({ id: t.id!, name: t.name! }));
     }
 
     return c.json({
@@ -420,8 +430,12 @@ app.put("/posts/:id", async (c) => {
       // 優先: slug ベース（なければ作成/紐付け）
       if (Array.isArray(body.gameSlugs) && body.gameSlugs.length > 0) {
         for (const slug of body.gameSlugs as string[]) {
-          if (!slug || typeof slug !== 'string') continue;
-          let cat = await db.select().from(gameCategories).where(eq(gameCategories.slug, slug)).get();
+          if (!slug || typeof slug !== "string") continue;
+          let cat = await db
+            .select()
+            .from(gameCategories)
+            .where(eq(gameCategories.slug, slug))
+            .get();
           if (!cat) {
             // try map via constants; if a row exists by name/displayName, backfill slug; otherwise insert
             const g = GAMES.find((x) => x.slug === slug);
@@ -429,22 +443,37 @@ app.put("/posts/:id", async (c) => {
               const byName = await db
                 .select()
                 .from(gameCategories)
-                .where(or(like(gameCategories.name, g.nameEn), like(gameCategories.displayName, g.nameEn)))
+                .where(
+                  or(
+                    like(gameCategories.name, g.nameEn),
+                    like(gameCategories.displayName, g.nameEn),
+                  ),
+                )
                 .get();
               if (byName) {
-                await db.update(gameCategories).set({ slug: slug, name: g.nameEn, displayName: g.nameEn }).where(eq(gameCategories.id, byName.id));
+                await db
+                  .update(gameCategories)
+                  .set({ slug: slug, name: g.nameEn, displayName: g.nameEn })
+                  .where(eq(gameCategories.id, byName.id));
                 cat = { ...byName, slug, name: g.nameEn, displayName: g.nameEn } as any;
               } else {
                 const insertedCat = await db
                   .insert(gameCategories)
-                  .values({ slug: slug, name: g.nameEn, displayName: g.nameEn, createdAt: Date.now() })
+                  .values({
+                    slug: slug,
+                    name: g.nameEn,
+                    displayName: g.nameEn,
+                    createdAt: Date.now(),
+                  })
                   .returning();
                 cat = insertedCat[0];
               }
             }
           }
           if (cat) {
-            await db.insert(postGameCategories).values({ postId: id, gameCategoryId: (cat as any).id });
+            await db
+              .insert(postGameCategories)
+              .values({ postId: id, gameCategoryId: (cat as any).id });
             inserted++;
           }
         }
@@ -455,7 +484,11 @@ app.put("/posts/:id", async (c) => {
         for (const gameCategoryName of body.gameCategories as string[]) {
           if (!gameCategoryName || gameCategoryName.trim() === "") continue;
           const trimmedName = gameCategoryName.trim();
-          const cat = await db.select().from(gameCategories).where(eq(gameCategories.name, trimmedName)).get();
+          const cat = await db
+            .select()
+            .from(gameCategories)
+            .where(eq(gameCategories.name, trimmedName))
+            .get();
           if (cat) {
             await db.insert(postGameCategories).values({ postId: id, gameCategoryId: cat.id });
           }
@@ -594,7 +627,11 @@ app.get("/posts", async (c) => {
     if (status == "published") {
       // optional game filter (prefer slug match; fallback to LIKE for legacy data)
       if (game) {
-        const bySlug = await db.select().from(gameCategories).where(eq(gameCategories.slug, game)).get();
+        const bySlug = await db
+          .select()
+          .from(gameCategories)
+          .where(eq(gameCategories.slug, game))
+          .get();
         if (bySlug) {
           const rel = await db
             .select({ postId: postGameCategories.postId })
@@ -618,7 +655,11 @@ app.get("/posts", async (c) => {
           const candidates = resolveGameCategoryCandidates(game, fromGames?.nameEn);
           const likeConds = candidates.map((n) => like(gameCategories.name, `%${n}%`));
           const matchedCats = likeConds.length
-            ? await db.select().from(gameCategories).where(or(...likeConds)).all()
+            ? await db
+                .select()
+                .from(gameCategories)
+                .where(or(...likeConds))
+                .all()
             : [];
           const catIds = matchedCats.map((gc) => gc.id);
           if (catIds.length === 0) {
@@ -665,7 +706,11 @@ app.get("/posts", async (c) => {
         .all();
     } else {
       if (game) {
-        const bySlug = await db.select().from(gameCategories).where(eq(gameCategories.slug, game)).get();
+        const bySlug = await db
+          .select()
+          .from(gameCategories)
+          .where(eq(gameCategories.slug, game))
+          .get();
         if (bySlug) {
           const rel = await db
             .select({ postId: postGameCategories.postId })
@@ -688,7 +733,11 @@ app.get("/posts", async (c) => {
           const candidates = resolveGameCategoryCandidates(game, fromGames?.nameEn);
           const likeConds = candidates.map((n) => like(gameCategories.name, `%${n}%`));
           const matchedCats = likeConds.length
-            ? await db.select().from(gameCategories).where(or(...likeConds)).all()
+            ? await db
+                .select()
+                .from(gameCategories)
+                .where(or(...likeConds))
+                .all()
             : [];
           const catIds = matchedCats.map((gc) => gc.id);
           if (catIds.length === 0) {
