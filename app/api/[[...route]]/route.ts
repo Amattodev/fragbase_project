@@ -36,6 +36,7 @@ const app = new Hono().basePath("/api");
 
 type Tag = InferSelectModel<typeof tags>;
 type GameCategory = InferSelectModel<typeof gameCategories>;
+type PostRow = InferSelectModel<typeof posts>;
 
 // 日本語ラベルを英語キーにマッピングする
 const mapLabelToKey = (game: string, label: string): string => {
@@ -278,7 +279,7 @@ app.get("/tags", async (c) => {
     const db = getDatabase();
     const query = c.req.query("q") || "";
 
-    let result;
+    let result: PostRow[] = [];
 
     if (query) {
       result = await db
