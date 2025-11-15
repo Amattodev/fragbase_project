@@ -1,9 +1,11 @@
-import { and, desc, eq, isNull, like } from "drizzle-orm";
+import { auth } from "@/auth";
+import { and, desc, eq, inArray, isNull, like, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import { getToken } from "next-auth/jwt";
-import { auth } from "@/auth";
 
+import { resolveGameCategoryCandidates } from "@/constants/gameCategoryMap";
+import { GAMES } from "@/constants/games";
 import {
   gameCategories,
   postCommentLikes,
@@ -34,6 +36,7 @@ const app = new Hono().basePath("/api");
 
 type Tag = InferSelectModel<typeof tags>;
 type GameCategory = InferSelectModel<typeof gameCategories>;
+type PostRow = InferSelectModel<typeof posts>;
 
 // 日本語ラベルを英語キーにマッピングする
 const mapLabelToKey = (game: string, label: string): string => {
@@ -216,7 +219,10 @@ app.post("/posts", async (c) => {
             token.sub,
           );
           return c.json(
-            { ok: false, error: "ユーザー情報が初期化されていません。サインイン後に再度お試しください。" },
+            {
+              ok: false,
+              error: "ユーザー情報が初期化されていません。サインイン後に再度お試しください。",
+            },
             409,
           );
         }
@@ -229,7 +235,10 @@ app.post("/posts", async (c) => {
       } else {
         console.warn("[PostCreate] user lookup failed; rejecting create", e);
         return c.json(
-          { ok: false, error: "ユーザー情報の確認に失敗しました。時間をおいて再試行してください。" },
+          {
+            ok: false,
+            error: "ユーザー情報の確認に失敗しました。時間をおいて再試行してください。",
+          },
           500,
         );
       }
@@ -276,15 +285,16 @@ app.get("/tags", async (c) => {
     const db = getDatabase();
     const query = c.req.query("q") || "";
 
-    let result;
+    let result: { id: number; name: string }[] = [];
 
     if (query) {
-      result = await db
+      const rows = await db
         .select()
         .from(tags)
         .where(like(tags.name, `%${query}%`))
         .limit(10)
         .all();
+      result = rows.map((t) => ({ id: t.id!, name: t.name! }));
     } else {
       const allTags = await db.select().from(tags).all();
       const withCounts = await Promise.all(
@@ -300,7 +310,10 @@ app.get("/tags", async (c) => {
           };
         }),
       );
-      result = withCounts.sort((a, b) => b.count - a.count).slice(0, 20);
+      result = withCounts
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20)
+        .map((t) => ({ id: t.id!, name: t.name! }));
     }
 
     return c.json({
@@ -410,21 +423,75 @@ app.put("/posts/:id", async (c) => {
     }
 
     // ゲームカテゴリの処理
-    if (body.gameCategories) {
+    if (body.gameSlugs || body.gameCategories) {
       await db.delete(postGameCategories).where(eq(postGameCategories.postId, id));
+      let inserted = 0;
 
-      for (const gameCategoryName of body.gameCategories) {
-        if (!gameCategoryName || gameCategoryName.trim() === "") continue;
+      // 優先: slug ベース（なければ作成/紐付け）
+      if (Array.isArray(body.gameSlugs) && body.gameSlugs.length > 0) {
+        for (const slug of body.gameSlugs as string[]) {
+          if (!slug || typeof slug !== "string") continue;
+          let cat = await db
+            .select()
+            .from(gameCategories)
+            .where(eq(gameCategories.slug, slug))
+            .get();
+          if (!cat) {
+            // try map via constants; if a row exists by name/displayName, backfill slug; otherwise insert
+            const g = GAMES.find((x) => x.slug === slug);
+            if (g) {
+              const byName = await db
+                .select()
+                .from(gameCategories)
+                .where(
+                  or(
+                    like(gameCategories.name, g.nameEn),
+                    like(gameCategories.displayName, g.nameEn),
+                  ),
+                )
+                .get();
+              if (byName) {
+                await db
+                  .update(gameCategories)
+                  .set({ slug: slug, name: g.nameEn, displayName: g.nameEn })
+                  .where(eq(gameCategories.id, byName.id));
+                cat = { ...byName, slug, name: g.nameEn, displayName: g.nameEn } as any;
+              } else {
+                const insertedCat = await db
+                  .insert(gameCategories)
+                  .values({
+                    slug: slug,
+                    name: g.nameEn,
+                    displayName: g.nameEn,
+                    createdAt: Date.now(),
+                  })
+                  .returning();
+                cat = insertedCat[0];
+              }
+            }
+          }
+          if (cat) {
+            await db
+              .insert(postGameCategories)
+              .values({ postId: id, gameCategoryId: (cat as any).id });
+            inserted++;
+          }
+        }
+      }
 
-        const trimmedName = gameCategoryName.trim();
-        const existingCategories = await db.select().from(gameCategories).all();
-        const gameCategory = existingCategories.find((gc) => gc.name === trimmedName);
-
-        if (gameCategory) {
-          await db.insert(postGameCategories).values({
-            postId: id,
-            gameCategoryId: gameCategory.id,
-          });
+      // 後方互換: name ベース
+      if (inserted === 0 && Array.isArray(body.gameCategories)) {
+        for (const gameCategoryName of body.gameCategories as string[]) {
+          if (!gameCategoryName || gameCategoryName.trim() === "") continue;
+          const trimmedName = gameCategoryName.trim();
+          const cat = await db
+            .select()
+            .from(gameCategories)
+            .where(eq(gameCategories.name, trimmedName))
+            .get();
+          if (cat) {
+            await db.insert(postGameCategories).values({ postId: id, gameCategoryId: cat.id });
+          }
         }
       }
     }
@@ -553,18 +620,81 @@ app.get("/posts", async (c) => {
     const status = c.req.query("status") || "published";
     const limit = Number(c.req.query("limit")) || 10;
     const offset = Number(c.req.query("offset")) || 0;
+    const game = c.req.query("game") || "";
 
-    let result;
+    let result: PostRow[] = [];
 
     if (status == "published") {
-      result = await db
-        .select()
-        .from(posts)
-        .where(eq(posts.status, "published"))
-        .orderBy(desc(posts.createdAt))
-        .limit(limit + 1)
-        .offset(offset)
-        .all();
+      // optional game filter (prefer slug match; fallback to LIKE for legacy data)
+      if (game) {
+        const bySlug = await db
+          .select()
+          .from(gameCategories)
+          .where(eq(gameCategories.slug, game))
+          .get();
+        if (bySlug) {
+          const rel = await db
+            .select()
+            .from(postGameCategories)
+            .where(eq(postGameCategories.gameCategoryId, bySlug.id))
+            .all();
+          const postIds = Array.from(new Set(rel.map((r) => r.postId)));
+          result = postIds.length
+            ? await db
+                .select()
+                .from(posts)
+                .where(and(eq(posts.status, "published"), inArray(posts.id, postIds)))
+                .orderBy(desc(posts.createdAt))
+                .limit(limit + 1)
+                .offset(offset)
+                .all()
+            : [];
+        } else {
+          // Fallback: name LIKE candidates
+          const fromGames = GAMES.find((g) => g.slug === game);
+          const candidates = resolveGameCategoryCandidates(game, fromGames?.nameEn);
+          const likeConds = candidates.map((n) => like(gameCategories.name, `%${n}%`));
+          const matchedCats = likeConds.length
+            ? await db
+                .select()
+                .from(gameCategories)
+                .where(or(...likeConds))
+                .all()
+            : [];
+          const catIds = matchedCats.map((gc) => gc.id);
+          if (catIds.length === 0) {
+            result = [];
+          } else {
+            const rel = await db
+              .select()
+              .from(postGameCategories)
+              .where(inArray(postGameCategories.gameCategoryId, catIds))
+              .all();
+            const postIdSet = Array.from(new Set(rel.map((r) => r.postId)));
+            if (postIdSet.length === 0) {
+              result = [];
+            } else {
+              result = await db
+                .select()
+                .from(posts)
+                .where(and(eq(posts.status, "published"), inArray(posts.id, postIdSet)))
+                .orderBy(desc(posts.createdAt))
+                .limit(limit + 1)
+                .offset(offset)
+                .all();
+            }
+          }
+        }
+      } else {
+        result = await db
+          .select()
+          .from(posts)
+          .where(eq(posts.status, "published"))
+          .orderBy(desc(posts.createdAt))
+          .limit(limit + 1)
+          .offset(offset)
+          .all();
+      }
     } else if (status == "draft") {
       result = await db
         .select()
@@ -575,13 +705,71 @@ app.get("/posts", async (c) => {
         .offset(offset)
         .all();
     } else {
-      result = await db
-        .select()
-        .from(posts)
-        .orderBy(desc(posts.createdAt))
-        .limit(limit + 1)
-        .offset(offset)
-        .all();
+      if (game) {
+        const bySlug = await db
+          .select()
+          .from(gameCategories)
+          .where(eq(gameCategories.slug, game))
+          .get();
+        if (bySlug) {
+          const rel = await db
+            .select()
+            .from(postGameCategories)
+            .where(eq(postGameCategories.gameCategoryId, bySlug.id))
+            .all();
+          const postIdSet = Array.from(new Set(rel.map((r) => r.postId)));
+          result = postIdSet.length
+            ? await db
+                .select()
+                .from(posts)
+                .where(inArray(posts.id, postIdSet))
+                .orderBy(desc(posts.createdAt))
+                .limit(limit + 1)
+                .offset(offset)
+                .all()
+            : [];
+        } else {
+          const fromGames = GAMES.find((g) => g.slug === game);
+          const candidates = resolveGameCategoryCandidates(game, fromGames?.nameEn);
+          const likeConds = candidates.map((n) => like(gameCategories.name, `%${n}%`));
+          const matchedCats = likeConds.length
+            ? await db
+                .select()
+                .from(gameCategories)
+                .where(or(...likeConds))
+                .all()
+            : [];
+          const catIds = matchedCats.map((gc) => gc.id);
+          if (catIds.length === 0) {
+            result = [];
+          } else {
+            const rel = await db
+              .select()
+              .from(postGameCategories)
+              .where(inArray(postGameCategories.gameCategoryId, catIds))
+              .all();
+            const postIdSet = Array.from(new Set(rel.map((r) => r.postId)));
+            result = postIdSet.length
+              ? await db
+                  .select()
+                  .from(posts)
+                  .where(inArray(posts.id, postIdSet))
+                  .orderBy(desc(posts.createdAt))
+                  .limit(limit + 1)
+                  .offset(offset)
+                  .all()
+              : [];
+          }
+        }
+      } else {
+        result = await db
+          .select()
+          .from(posts)
+          .orderBy(desc(posts.createdAt))
+          .limit(limit + 1)
+          .offset(offset)
+          .all();
+      }
     }
 
     const hasMore = result.length > limit;
@@ -698,7 +886,7 @@ app.post("/posts/:id/likes", async (c) => {
 
     const body = await c.req.json();
     const session = await auth();
-    const userIdentifier = (session?.user as any)?.id ?? body.userIdentifier;
+    const userIdentifier = session?.user?.id ?? body.userIdentifier;
 
     if (!userIdentifier) {
       return c.json({ ok: false, error: "User identifier is required" }, 400);

@@ -18,6 +18,10 @@ export type Post = {
   };
 };
 
-export type ListResponse = { ok: boolean; posts?: Post[]; error?: string };
+export type ListResponse = {
+  ok: boolean;
+  posts?: Post[];
+  pagination?: { limit: number; offset: number; hasMore: boolean; total?: number };
+  error?: string;
+};
 export type SingleResponse = { ok: boolean; post?: Post; error?: string };
-
