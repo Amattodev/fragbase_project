@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
   try {
     const result = await syncGamesFromConstants();
-    return new Response(JSON.stringify({ ok: true, ...result }), {
+    return new Response(JSON.stringify(result), {
       headers: { 'content-type': 'application/json' },
     });
   } catch (err: unknown) {
@@ -31,4 +31,3 @@ export async function GET(request: Request) {
   // Allow GET for testing with the same secret check
   return POST(request);
 }
-
