@@ -86,7 +86,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-screen bg-[var(--color-bg)] p-4 text-[var(--color-text)]`}>
+      <body className={`${inter.className} min-h-screen bg-background p-4 text-foreground`}>
         <SessionProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

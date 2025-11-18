@@ -19,11 +19,19 @@ export function RailIcon({ slug, name, active = false, onClick }: RailIconProps)
       aria-label={name}
       title={name}
       onClick={onClick}
-      className={`group flex w-[72px] flex-col items-center gap-1 rounded-md p-2 outline-none transition-colors
-        ${active ? "bg-[var(--color-surface)]" : "hover:bg-[var(--color-surface-hover)]"}`}
+      className={`group flex w-[72px] flex-col items-center gap-1 rounded-md border p-2 outline-none transition-all
+        ${
+          active
+            ? "border-success/70 bg-card/80 shadow-[0_0_14px_rgba(123,255,74,0.35)]"
+            : "border-transparent hover:border-border hover:bg-card/40"
+        }`}
     >
       <GameIconImage slug={slug} name={name} size={56} active={active} />
-      <span className={`line-clamp-1 w-full text-center text-xs ${active ? "font-medium" : "text-muted-foreground"}`}>
+      <span
+        className={`line-clamp-2 w-full text-center text-[11px] leading-tight ${
+          active ? "font-medium text-success" : "text-muted-foreground"
+        }`}
+      >
         {name}
       </span>
     </button>

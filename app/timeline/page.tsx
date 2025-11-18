@@ -1,8 +1,9 @@
-import Link from 'next/link';
+import Link from "next/link";
 
-import PostGrid from '@/app/_components/PostGrid';
-import { TIMELINE_DEFAULT_PAGE_SIZE, TIMELINE_MAX_PAGE_SIZE } from '@/lib/constants/timeline';
-import { listTimelinePosts } from '@/lib/services/server/timeline/read';
+import PostGrid from "@/app/_components/PostGrid";
+import TopNavTabs from "@/app/_components/TopNavTabs";
+import { TIMELINE_DEFAULT_PAGE_SIZE, TIMELINE_MAX_PAGE_SIZE } from "@/lib/constants/timeline";
+import { listTimelinePosts } from "@/lib/services/server/timeline/read";
 
 export const dynamic = 'force-dynamic';
 
@@ -34,53 +35,53 @@ export default async function TimelinePage({
     return `?${q.toString()}`;
   }
 
+  const currentPage = Math.floor(pagination.offset / limit) + 1;
+
   return (
-    <main className="mx-auto max-w-6xl p-4">
-      {/* Top Tabs: Trending / Timeline / Ranking / Explore */}
-      <div className="mb-6 flex gap-4 border-b border-gray-200">
-        <Link href="/" className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300">
-          Trending
-        </Link>
-        <Link href="/timeline" className="-mb-px border-b-2 border-black px-2 pb-2 text-sm font-medium">
-          Timeline
-        </Link>
-        <Link href="/rankings" className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300">
-          Ranking
-        </Link>
-        <Link href="/explore" className="-mb-px border-b-2 border-transparent px-2 pb-2 text-sm text-gray-500 hover:border-gray-300">
-          Explore
-        </Link>
-      </div>
+    <>
+      <TopNavTabs active="timeline" />
+      <main className="mx-auto max-w-6xl p-4">
+        <h1 className="mb-3 text-2xl font-semibold">Timeline</h1>
 
-      <h1 className="mb-3 text-2xl font-semibold">Timeline</h1>
+        {posts.length === 0 ? (
+          <p className="text-sm text-gray-500">記事が見つかりません</p>
+        ) : (
+          <PostGrid posts={posts} />
+        )}
 
-      {posts.length === 0 ? (
-        <p className="text-sm text-gray-500">記事が見つかりません</p>
-      ) : (
-        <PostGrid posts={posts} />
-      )}
-
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between text-sm">
-        <div className="text-gray-500">
-          {pagination.offset + 1}–{pagination.offset + posts.length}
-        </div>
-        <div className="flex gap-2">
+        {/* Pagination */}
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs">
           <Link
-            href={buildQuery({ offset: String(Math.max(pagination.offset - limit, 0)), limit: String(limit) })}
-            className={`rounded border px-3 py-1 ${pagination.offset === 0 ? 'pointer-events-none opacity-40' : ''}`}
+            href={buildQuery({
+              offset: String(Math.max(pagination.offset - limit, 0)),
+              limit: String(limit),
+            })}
+            className={`inline-flex items-center rounded-full border border-border/70 px-3 py-1.5 transition-colors ${
+              pagination.offset === 0
+                ? "pointer-events-none opacity-40"
+                : "hover:bg-card hover:text-foreground"
+            }`}
           >
             前へ
           </Link>
+          <span className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-[11px] text-muted-foreground">
+            Page {currentPage}
+          </span>
           <Link
-            href={buildQuery({ offset: String(pagination.offset + limit), limit: String(limit) })}
-            className={`rounded border px-3 py-1 ${!pagination.hasMore ? 'pointer-events-none opacity-40' : ''}`}
+            href={buildQuery({
+              offset: String(pagination.offset + limit),
+              limit: String(limit),
+            })}
+            className={`inline-flex items-center rounded-full border border-border/70 px-3 py-1.5 transition-colors ${
+              !pagination.hasMore
+                ? "pointer-events-none opacity-40"
+                : "hover:bg-card hover:text-foreground"
+            }`}
           >
             次へ
           </Link>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
-

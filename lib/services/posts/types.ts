@@ -9,6 +9,7 @@ export type Post = {
   slug: string;
   createdAt: number;
   updatedAt: number;
+  likesCount?: number;
   tags: { id: number; name: string; norm: string }[];
   gameCategories: { id: number; name: string; displayName: string }[];
   user?: {
