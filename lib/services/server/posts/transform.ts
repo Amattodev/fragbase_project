@@ -6,6 +6,7 @@ import type { InferSelectModel } from 'drizzle-orm';
 import {
   gameCategories,
   postGameCategories,
+  postLikes,
   postTags,
   posts,
   tags,
@@ -97,16 +98,29 @@ async function buildUsersByIdMap(userIds: string[]) {
   return usersById;
 }
 
+async function buildLikesCountByPostIdMap(postIds: number[]) {
+  const database = getDatabase();
+  const map = new Map<number, number>();
+  if (postIds.length === 0) return map;
+  const rows = await database.select().from(postLikes).where(inArray(postLikes.postId, postIds));
+  for (const row of rows) {
+    if (row.postId == null) continue;
+    map.set(row.postId, (map.get(row.postId) || 0) + 1);
+  }
+  return map;
+}
+
 export async function convertDatabaseRowsToPostCards(baseRows: PostDatabaseRow[]): Promise<Post[]> {
   const postIds = baseRows.map((post) => post.id);
   if (postIds.length === 0) return [] as Post[];
 
   const uniqueUserIds = Array.from(new Set(baseRows.map((post) => post.userId).filter((value): value is string => !!value)));
 
-  const [tagsByPostId, gameCategoriesByPostId, usersById] = await Promise.all([
+  const [tagsByPostId, gameCategoriesByPostId, usersById, likesCountByPostId] = await Promise.all([
     buildTagsByPostIdMap(postIds),
     buildGameCategoriesByPostIdMap(postIds),
     buildUsersByIdMap(uniqueUserIds),
+    buildLikesCountByPostIdMap(postIds),
   ]);
 
   return baseRows.map<Post>((postRow) => ({
@@ -118,9 +132,9 @@ export async function convertDatabaseRowsToPostCards(baseRows: PostDatabaseRow[]
     slug: postRow.slug,
     createdAt: postRow.createdAt as number,
     updatedAt: postRow.updatedAt as number,
+    likesCount: likesCountByPostId.get(postRow.id) ?? 0,
     tags: tagsByPostId.get(postRow.id) ?? [],
     gameCategories: gameCategoriesByPostId.get(postRow.id) ?? [],
     user: postRow.userId ? usersById.get(postRow.userId) : undefined,
   }));
 }
-

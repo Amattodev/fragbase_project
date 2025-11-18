@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,7 @@ export default function Header() {
     if (process.env.NODE_ENV !== "production") {
       console.log("[AuthDebug] useSession status:", status);
       console.log("[AuthDebug] useSession session:", session);
-      debugFetchSession().then((json) =>
-        console.log("[AuthDebug] /api/auth/session:", json),
-      );
+      debugFetchSession().then((json) => console.log("[AuthDebug] /api/auth/session:", json));
     }
   }, [status, session]);
 
@@ -60,7 +58,7 @@ export default function Header() {
     }
   };
   return (
-    <div className="mb-6 flex items-center justify-between">
+    <div className="flex items-center justify-between">
       <Link href="/" onClick={handleLogoClick}>
         <Image
           src="/fragbase_logo.png"
@@ -82,14 +80,14 @@ export default function Header() {
             {/* 投稿ボタン（ログインユーザーのみ表示） */}
             {isPostingEnabled() ? (
               <Button
-                className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]"
+                className="rounded-full px-6"
                 onClick={handleCreateArticleClick}
               >
                 ＋ 記事を書く
               </Button>
             ) : (
               <Link href="/post">
-                <Button className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]">
+                <Button className="rounded-full px-6">
                   ＋ 投稿
                 </Button>
               </Link>
@@ -163,7 +161,7 @@ export default function Header() {
           // 未ログイン状態
           <Button
             onClick={() => signIn()}
-            className="rounded-full bg-[var(--color-accent)] px-6 py-2 text-black hover:bg-[var(--color-accent-hover)]"
+            className="rounded-full px-6"
           >
             ログイン
           </Button>

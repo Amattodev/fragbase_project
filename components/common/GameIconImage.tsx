@@ -23,7 +23,9 @@ export default function GameIconImage({ slug, name, size = 56, active = false, c
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-full ${active ? "ring-2 ring-[var(--color-accent)]" : ""} ${className ?? ""}`}
+      className={`relative shrink-0 overflow-hidden rounded-full ${
+        active ? "ring-2 ring-success shadow-[0_0_12px_rgba(123,255,74,0.45)]" : ""
+      } ${className ?? ""}`}
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -69,4 +71,3 @@ function hashColor(slug: string) {
   const hue = Math.abs(h) % 360;
   return `hsl(${hue} 70% 40%)`;
 }
-
