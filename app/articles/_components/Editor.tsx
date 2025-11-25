@@ -1,5 +1,12 @@
 "use client";
 import dynamic from "next/dynamic";
+import {
+  Image as ImageIcon,
+  Video as VideoIcon,
+  Youtube,
+  Twitch,
+  Twitter,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +38,7 @@ interface EditorProps {
   onChange: (markdown: string) => void;
   onSave?: () => void;
   hasUnsavedChanges?: boolean;
+  renderLayout?: (toolbar: React.ReactNode, editor: React.ReactNode) => React.ReactNode;
 }
 
 export default function EditorComponent({
@@ -38,6 +46,7 @@ export default function EditorComponent({
   onChange,
   onSave,
   hasUnsavedChanges = false,
+  renderLayout,
 }: EditorProps) {
   const [editorContent, setEditorContent] = useState(content);
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -342,13 +351,6 @@ export default function EditorComponent({
     }
   }, [editorContent, onChange]);
 
-  // 手動保存
-  const handleManualSave = useCallback(() => {
-    if (onSave) {
-      onSave();
-    }
-  }, [onSave]);
-
   // キーボードショートカットで保存
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -371,94 +373,110 @@ export default function EditorComponent({
     onChange(newContent);
   };
 
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/80 px-2 py-2 shadow-[0_0_18px_rgba(0,0,0,0.65)] backdrop-blur-sm">
+      <Button
+        onClick={handleImageUpload}
+        variant="outline"
+        size="sm"
+        aria-label="画像を挿入"
+        title="画像を挿入"
+      >
+        <ImageIcon className="h-4 w-4" />
+      </Button>
+      <Button
+        onClick={handleVideoUpload}
+        variant="outline"
+        size="sm"
+        disabled={uploadingVideo}
+        aria-label="動画を挿入"
+        title="動画を挿入"
+      >
+        {uploadingVideo ? "…" : <VideoIcon className="h-4 w-4" />}
+      </Button>
+      <Button
+        onClick={() => handleVideoEmbed("youtube")}
+        variant="outline"
+        size="sm"
+        aria-label="YouTube を埋め込む"
+        title="YouTube を埋め込む"
+      >
+        <Youtube className="h-4 w-4" />
+      </Button>
+      <Button
+        onClick={() => handleVideoEmbed("twitch")}
+        variant="outline"
+        size="sm"
+        aria-label="Twitch を埋め込む"
+        title="Twitch を埋め込む"
+      >
+        <Twitch className="h-4 w-4" />
+      </Button>
+      <Button
+        onClick={() => handleVideoEmbed("tiktok")}
+        variant="outline"
+        size="sm"
+        aria-label="TikTok を埋め込む"
+        title="TikTok を埋め込む"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path
+            d="M15.5 4.5c.4 1.3 1.4 2.3 2.7 2.7v2.3c-1.1-.1-2.1-.5-3-1.1v5.7c0 2.9-2.4 5.2-5.3 5.1-2.8 0-5.1-2.3-5.1-5.1 0-2.9 2.3-5.2 5.1-5.2.3 0 .6 0 .9.1v2.3c-.3-.1-.6-.2-.9-.2-1.6 0-2.9 1.3-2.9 3 0 1.6 1.3 2.9 2.9 2.9 1.6 0 2.9-1.3 2.9-3V4.5h2.7z"
+            fill="currentColor"
+          />
+        </svg>
+      </Button>
+      <Button
+        onClick={handleXEmbed}
+        variant="outline"
+        size="sm"
+        aria-label="X（Twitter）を埋め込む"
+        title="X（Twitter）を埋め込む"
+      >
+        <Twitter className="h-4 w-4" />
+      </Button>
+      {hasUnsavedChanges && (
+        <div className="flex items-center text-sm text-destructive">
+          <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-destructive" />
+          未保存の変更があります
+        </div>
+      )}
+    </div>
+  );
+
+  const editor = (
+    <div
+      className="h-full overflow-hidden rounded-lg border border-border bg-background/90 shadow-[0_0_20px_rgba(0,0,0,0.85)]"
+      data-color-mode="dark"
+    >
+      <MDEditor
+        value={editorContent}
+        onChange={handleEditorChange}
+        preview="edit"
+        hideToolbar={false}
+        visibleDragbar={false}
+        data-color-mode="dark"
+        style={{
+          backgroundColor: "var(--card)",
+        }}
+        height={EDITOR_HEIGHT_PX}
+      />
+    </div>
+  );
+
+  if (renderLayout) {
+    return <div className="h-full space-y-4">{renderLayout(toolbar, editor)}</div>;
+  }
+
   return (
-    <div className="h-full">
-      {/* ツールバー */}
-      <div className="mb-4 flex gap-2">
-        <Button
-          onClick={handleImageUpload}
-          variant="outline"
-          size="sm"
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-        >
-          📷 画像を挿入
-        </Button>
-        <Button
-          onClick={handleVideoUpload}
-          variant="outline"
-          size="sm"
-          disabled={uploadingVideo}
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-        >
-          {uploadingVideo ? "アップロード中..." : "📹 動画を挿入"}
-        </Button>
-        <Button
-          onClick={() => handleVideoEmbed("youtube")}
-          variant="outline"
-          size="sm"
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-        >
-          🎥 YouTube
-        </Button>
-        <Button
-          onClick={() => handleVideoEmbed("twitch")}
-          variant="outline"
-          size="sm"
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-        >
-          🎥 twitch
-        </Button>
-        <Button
-          onClick={() => handleVideoEmbed("tiktok")}
-          variant="outline"
-          size="sm"
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-        >
-          🎥 tiktok
-        </Button>
-        <Button
-          onClick={handleXEmbed}
-          variant="outline"
-          size="sm"
-          className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-        >
-          🐦 X
-        </Button>
-        <Button
-          onClick={handleManualSave}
-          variant="outline"
-          size="sm"
-          className={`${
-            hasUnsavedChanges
-              ? "animate-pulse bg-[var(--color-danger)] text-white hover:brightness-110"
-              : "bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
-          }`}
-        >
-          {hasUnsavedChanges ? "💾 未保存" : "💾 保存"}
-        </Button>
-
-        {hasUnsavedChanges && (
-          <div className="flex items-center text-sm text-[var(--color-danger)]">
-            <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-danger)]"></span>
-            未保存の変更があります
-          </div>
-        )}
-      </div>
-
-      {/* エディタ本体 */}
-      <div className="h-[calc(100%-60px)] overflow-hidden rounded-lg" data-color-mode="dark">
-        <MDEditor
-          value={editorContent}
-          onChange={handleEditorChange}
-          preview="edit"
-          hideToolbar={false}
-          visibleDragbar={false}
-          data-color-mode="dark"
-          style={{
-            backgroundColor: "var(--color-surface)",
-          }}
-          height={EDITOR_HEIGHT_PX}
-        />
+    <div className="h-full space-y-4">
+      {toolbar}
+      <div className="h-[calc(100%-60px)]">
+        {editor}
       </div>
     </div>
   );
