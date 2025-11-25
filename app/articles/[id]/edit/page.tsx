@@ -271,7 +271,7 @@ export default function ArticleEditPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div>記事を読み込み中...</div>
       </div>
     );
@@ -279,7 +279,7 @@ export default function ArticleEditPage() {
 
   if (!post) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div>記事が見つかりません</div>
       </div>
     );
@@ -309,42 +309,45 @@ export default function ArticleEditPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      {/* ヘッダー */}
-      <div className="border-b border-gray-700 p-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* 編集用トップバー（TopNavTabs と同系デザイン） */}
+      <div className="mb-4 w-full border-b border-border">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <Button
               onClick={handleGoHome}
               variant="outline"
               size="sm"
-              className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
             >
               ← ホーム
             </Button>
-            <h1 className="text-xl font-bold">記事編集</h1>
+            <h1 className="-mb-px border-b-2 border-success px-2 pb-2 text-sm font-semibold text-success">
+              記事編集
+            </h1>
             {hasUnsavedChanges && (
-              <div className="flex items-center text-sm text-[var(--color-danger)]">
-                <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-danger)]"></span>
-                未保存
+              <div className="inline-flex items-center gap-2 rounded-full bg-destructive/15 px-3 py-1 text-xs font-medium text-destructive">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+                <span>未保存</span>
               </div>
             )}
           </div>
           {/* <div className="flex items-center gap-2">
           </div> */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <label className="text-sm text-[var(--color-text)]">
+              <label className="text-xs font-medium text-muted-foreground">
                 {status === "published" ? "公開中" : "下書き"}
               </label>
               <button
                 onClick={() => handleStatusChange(status === "draft" ? "published" : "draft")}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  status === "published" ? "bg-[var(--color-accent)]" : "bg-gray-600"
+                  status === "published"
+                    ? "border border-primary/70 bg-primary shadow-[0_0_18px_rgba(0,245,255,0.75)]"
+                    : "border border-border bg-background/70"
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-4 w-4 transform rounded-full bg-foreground shadow-[0_0_8px_rgba(0,0,0,0.8)] transition-transform ${
                     status === "published" ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
@@ -353,21 +356,22 @@ export default function ArticleEditPage() {
 
             <Button
               onClick={handleDeleteClick}
-              variant="outline"
+              variant="destructive"
               size="sm"
-              className="border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
             >
               削除
             </Button>
             <Button
               onClick={handleSave}
               disabled={saving}
-              className={`${
+              className={`min-w-[104px] shadow-[0_0_18px_rgba(0,245,255,0.35)] ${
+                status === "published"
+                  ? "bg-success text-primary-foreground hover:bg-success/90"
+                  : ""
+              } ${
                 hasUnsavedChanges && !saving
-                  ? "animate-pulse bg-[var(--color-danger)] text-white hover:brightness-110"
-                  : status === "published"
-                    ? "bg-[var(--color-success)] text-white hover:brightness-110"
-                    : "bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
+                  ? "ring-2 ring-primary/70 animate-pulse"
+                  : ""
               }`}
             >
               {saving
@@ -384,208 +388,252 @@ export default function ArticleEditPage() {
 
       {/* メインコンテンツ */}
       <div className="mx-auto max-w-6xl p-4">
-        <div className="grid h-[calc(100vh-120px)] grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* エディタ部分 */}
-          <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium">タイトル</label>
-              <Input
-                value={title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="記事のタイトルを入力..."
-                className={`border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] ${
-                  hasUnsavedChanges ? "border-[var(--color-danger)]" : ""
-                }`}
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">タグ（最大5個）</label>
-              <div className="mb-2 flex flex-wrap gap-2">
-                {tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-1 text-sm text-black"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleTagRemove(tag)}
-                      className="flex h-4 w-4 items-center justify-center rounded-full text-xs hover:bg-black hover:text-white"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {tags.length < 5 && (
-                <div className="relative">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* 左カラム：タイトル / タグ / ゲームタイトル + エディタ */}
+          <div className="relative flex flex-col rounded-xl border border-border bg-card/95 p-4 shadow-[0_0_24px_rgba(0,0,0,0.75)]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-primary via-primary/40 to-transparent" />
+            <div className="space-y-6">
+              {/* タイトル / タグ / ゲームタイトル */}
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    タイトル
+                  </label>
                   <Input
-                    value={tagInput}
-                    onChange={(e) => handleTagInputChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleTagAdd(tagInput);
-                      }
-                    }}
-                    placeholder="タグを入力してEnter"
-                    className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)]"
+                    value={title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    placeholder="記事のタイトルを入力..."
+                    className={`bg-white text-black ${hasUnsavedChanges ? "border-destructive" : ""}`}
                   />
-
-                  {/* タグ候補を表示 */}
-                  {tagSuggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-600 bg-[var(--color-surface)]">
-                      {tagSuggestions.map((suggestion) => (
+                </div>
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    タグ（最大5個）
+                  </label>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-xs text-primary shadow-[0_0_12px_rgba(0,245,255,0.25)]"
+                      >
+                        {tag}
                         <button
-                          key={suggestion.id}
                           type="button"
-                          onClick={() => handleTagAdd(suggestion.name)}
-                          className="block w-full px-3 py-2 text-left text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                          onClick={() => handleTagRemove(tag)}
+                          className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] text-primary hover:bg-primary/40 hover:text-background"
                         >
-                          {suggestion.name}
+                          ×
                         </button>
-                      ))}
+                      </span>
+                    ))}
+                  </div>
+
+                  {tags.length < 5 && (
+                    <div className="relative">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => handleTagInputChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleTagAdd(tagInput);
+                          }
+                        }}
+                        placeholder="タグを入力してEnter"
+                        className="bg-white text-black"
+                      />
+
+                      {/* タグ候補を表示 */}
+                      {tagSuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-border bg-background/95 shadow-[0_0_18px_rgba(0,0,0,0.85)]">
+                          {tagSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.id}
+                              type="button"
+                              onClick={() => handleTagAdd(suggestion.name)}
+                              className="block w-full px-3 py-2 text-left text-foreground hover:bg-card/80"
+                            >
+                              {suggestion.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">ゲームタイトル（複数選択可）</label>
-              <MultiSelect
-                options={availableGames}
-                selectedValues={gameSlugs}
-                onChange={handleGameSlugsChange}
-                placeholder="ゲームタイトルを選択"
-                className="w-full"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-2 block text-sm font-medium">本文（Markdown）</label>
-              <div className="h-[calc(100vh-240px)]">
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    ゲームタイトル（複数選択可）
+                  </label>
+                  <MultiSelect
+                    options={availableGames}
+                    selectedValues={gameSlugs}
+                    onChange={handleGameSlugsChange}
+                    placeholder="ゲームタイトルを選択"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* エディタ */}
+              <div className="mt-2 border-t border-border pt-4">
                 <EditorComponent
                   content={content}
                   onChange={handleContentChange}
                   onSave={handleSave}
                   hasUnsavedChanges={hasUnsavedChanges}
+                  renderLayout={(toolbar, editor) => (
+                    <>
+                      {/* 画像/動画挿入ボタンをフル幅で配置 */}
+                      <div className="mb-4">{toolbar}</div>
+                      {/* 本文エディタ */}
+                      <div className="h-[calc(100vh-260px)]">{editor}</div>
+                    </>
+                  )}
                 />
               </div>
             </div>
           </div>
 
-          {/* プレビュー部分 */}
-          <div className="overflow-auto rounded-lg bg-[var(--color-surface)] p-4">
-            <h3 className="mb-4 text-lg font-semibold">プレビュー</h3>
-            <div className="prose prose-invert max-w-none">
-              <h1 className="mb-4 border-b border-gray-600 pb-2 text-2xl font-bold">
-                {title || "タイトルなし"}
-              </h1>
-              <div className="prose prose-invert mt-4 max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    // カスタムコンポーネントでスタイリング
-                    h1: ({ children }) => (
-                      <h1 className="mb-4 mt-6 text-2xl font-bold text-[var(--color-text)]">{children}</h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="mb-3 mt-5 text-xl font-semibold text-[var(--color-text)]">{children}</h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="mb-2 mt-4 text-lg font-medium text-[var(--color-text)]">{children}</h3>
-                    ),
-                    p: ({ children }) => {
-                      const text = React.Children.toArray(children).join("");
-
-                      if (text.match(/\[(youtube|vimeo|tiktok):[^\]]+\]/)) {
-                        return <VideoEmbedComponent text={text} />;
-                      }
-
-                      return <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">{children}</p>;
-                    },
-                    ul: ({ children }) => (
-                      <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">{children}</ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">{children}</ol>
-                    ),
-                    li: ({ children }) => <li className="mb-1">{children}</li>,
-                    blockquote: ({ children }) => (
-                      <blockquote className="my-4 border-l-4 border-[var(--color-accent)] pl-4 italic text-[#D0D0D0]">
-                        {children}
-                      </blockquote>
-                    ),
-                    code: ({ children, ...props }) => {
-                      const isInline =
-                        props.className?.includes("inline") ||
-                        !props.className?.includes("language-");
-                      return isInline ? (
-                        <code className="rounded bg-[var(--color-bg)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
+          {/* 右カラム：プレビュー専用 */}
+          <div className="relative flex flex-col rounded-xl border border-border bg-card/95 p-4 shadow-[0_0_24px_rgba(0,0,0,0.75)]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-primary via-primary/40 to-transparent" />
+            <div className="flex-1 overflow-hidden rounded-lg border border-border bg-background/60 p-4">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                PREVIEW
+              </h3>
+              <div className="prose prose-invert max-w-none overflow-auto">
+                <h1 className="mb-4 border-b border-border pb-2 text-2xl font-bold text-foreground">
+                  {title || "タイトルなし"}
+                </h1>
+                <div className="prose prose-invert mt-4 max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="mb-4 mt-6 text-2xl font-bold text-foreground">
                           {children}
-                        </code>
-                      ) : (
-                        <code className="block overflow-x-auto rounded-lg bg-[var(--color-bg)] p-3 text-[var(--color-text)]">
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="mb-3 mt-5 text-xl font-semibold text-foreground">
                           {children}
-                        </code>
-                      );
-                    },
-                    pre: ({ children }) => (
-                      <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-bg)] p-4">
-                        {children}
-                      </pre>
-                    ),
-                    a: ({ href, children }) => (
-                      <a
-                        href={href}
-                        className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {children}
-                      </a>
-                    ),
-                    img: ({ src, alt }) => {
-                      // 動画ファイルかどうかをチェック
-                      const isVideo =
-                        src && typeof src === "string" && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="mb-2 mt-4 text-lg font-medium text-foreground">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => {
+                        const text = React.Children.toArray(children).join("");
 
-                      if (isVideo) {
+                        if (text.match(/\[(youtube|vimeo|tiktok):[^\]]+\]/)) {
+                          return <VideoEmbedComponent text={text} />;
+                        }
+
                         return (
-                          <video
-                            src={src}
-                            className="my-4 h-auto max-w-full rounded-lg"
-                            controls
-                            preload="metadata"
-                          >
-                            {alt && <p>{alt}</p>}
-                          </video>
+                          <p className="mb-4 leading-relaxed text-muted-foreground">
+                            {children}
+                          </p>
                         );
-                      }
+                      },
+                      ul: ({ children }) => (
+                        <ul className="mb-4 list-disc pl-6 text-muted-foreground">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="mb-4 list-decimal pl-6 text-muted-foreground">
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="my-4 border-l-4 border-border bg-white/5 pl-4 italic text-muted-foreground rounded-r-lg">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children, ...props }) => {
+                        const isInline =
+                          props.className?.includes("inline") ||
+                          !props.className?.includes("language-");
+                        return isInline
+                          ? (
+                            <code className="rounded bg-background px-1 py-0.5 text-sm text-foreground">
+                              {children}
+                            </code>
+                          )
+                          : (
+                            <code className="block overflow-x-auto rounded-lg border border-border bg-background p-3 text-sm text-foreground shadow-[0_0_16px_rgba(0,0,0,0.9)]">
+                              {children}
+                            </code>
+                          );
+                      },
+                      pre: ({ children }) => (
+                        <pre className="mb-4 overflow-x-auto rounded-lg border border-border bg-background p-4 shadow-[0_0_16px_rgba(0,0,0,0.9)]">
+                          {children}
+                        </pre>
+                      ),
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          className="text-primary underline decoration-primary/60 underline-offset-4 hover:text-primary/90"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      img: ({ src, alt }) => {
+                        // 動画ファイルかどうかをチェック
+                        const isVideo =
+                          src && typeof src === "string" &&
+                          /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src);
 
-                      return (
-                        <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />
-                      );
-                    },
-                    table: ({ children }) => (
-                      <div className="my-4 overflow-x-auto">
-                        <table className="min-w-full border border-gray-600">{children}</table>
-                      </div>
-                    ),
-                    th: ({ children }) => (
-                      <th className="border border-gray-600 bg-[var(--color-bg)] px-4 py-2 font-semibold text-[var(--color-text)]">
-                        {children}
-                      </th>
-                    ),
-                    td: ({ children }) => (
-                      <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
-                        {children}
-                      </td>
-                    ),
-                  }}
-                >
-                  {content || "*プレビューするコンテンツがありません*"}
-                </ReactMarkdown>
+                        if (isVideo) {
+                          return (
+                            <video
+                              src={src}
+                              className="my-4 h-auto max-w-full rounded-lg"
+                              controls
+                              preload="metadata"
+                            >
+                              {alt && <p>{alt}</p>}
+                            </video>
+                          );
+                        }
+
+                        return (
+                          <img
+                            src={src}
+                            alt={alt}
+                            className="my-4 h-auto max-w-full rounded-lg"
+                          />
+                        );
+                      },
+                      table: ({ children }) => (
+                        <div className="my-4 overflow-x-auto">
+                          <table className="min-w-full border border-border text-sm">
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-border bg-background px-4 py-2 font-semibold text-foreground">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-border px-4 py-2 text-muted-foreground">
+                          {children}
+                        </td>
+                      ),
+                    }}
+                  >
+                    {content || "*プレビューするコンテンツがありません*"}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           </div>
@@ -594,10 +642,10 @@ export default function ArticleEditPage() {
 
       {/* 削除確認ダイアログ */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-4 w-full max-w-md rounded-lg border border-gray-600 bg-[var(--color-surface)] p-6">
-            <h3 className="mb-4 text-lg font-semibold text-[var(--color-text)]">記事を削除</h3>
-            <p className="mb-6 text-[var(--color-subtle-text)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-destructive/60 bg-card p-6 shadow-[0_0_24px_rgba(0,0,0,0.85)]">
+            <h3 className="mb-4 text-lg font-semibold text-destructive">記事を削除</h3>
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
               本当にこの記事を削除しますか？
               <br />
               この操作は取り消すことができません。
@@ -606,14 +654,13 @@ export default function ArticleEditPage() {
               <Button
                 onClick={() => setShowDeleteDialog(false)}
                 variant="outline"
-                className="border-gray-600 bg-[var(--color-bg)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
                 disabled={deleting}
               >
                 キャンセル
               </Button>
               <Button
                 onClick={handleDelete}
-                className="bg-red-600 text-white hover:bg-red-700"
+                variant="destructive"
                 disabled={deleting}
               >
                 {deleting ? "削除中..." : "削除する"}

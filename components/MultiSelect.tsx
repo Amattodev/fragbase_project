@@ -75,7 +75,7 @@ export default function MultiSelect({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         variant="outline"
-        className="w-full justify-between border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+        className="w-full justify-between"
       >
         <span className="truncate">{getDisplayText()}</span>
         <span className={`transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
@@ -83,11 +83,11 @@ export default function MultiSelect({
 
       {/* ドロップダウンリスト */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-md border border-gray-600 bg-[var(--color-surface)]">
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-md border border-border bg-card shadow-[0_0_18px_rgba(0,0,0,0.8)]">
           {options.map((option) => (
             <label
               key={option.id}
-              className="flex cursor-pointer items-center px-3 py-2 hover:bg-[var(--color-surface-hover)]"
+              className="flex cursor-pointer items-center px-3 py-2 hover:bg-card/80"
             >
               <input
                 type="checkbox"
@@ -95,7 +95,7 @@ export default function MultiSelect({
                 onChange={() => toggleOption(option.name)}
                 className="mr-2 rounded"
               />
-              <span className="text-[var(--color-text)]">{option.displayName}</span>
+              <span className="text-sm text-foreground">{option.displayName}</span>
             </label>
           ))}
         </div>
@@ -111,13 +111,13 @@ export default function MultiSelect({
             return (
               <span
                 key={value}
-                className="flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-2 py-1 text-sm text-black"
+                className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-xs text-primary shadow-[0_0_12px_rgba(0,245,255,0.25)]"
               >
                 {displayName}
                 <button
                   type="button"
                   onClick={() => removeOption(value)}
-                  className="flex h-4 w-4 items-center justify-center rounded-full text-xs hover:bg-black hover:text-white"
+                  className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] text-primary hover:bg-primary/40 hover:text-background"
                 >
                   ×
                 </button>
