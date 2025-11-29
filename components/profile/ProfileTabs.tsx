@@ -1,36 +1,55 @@
 "use client";
 import Link from "next/link";
-import { useSelectedLayoutSegments } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export type GameTab = { slug: string; nameEn: string };
 
 export function ProfileTabs({ username, gameTabs }: { username: string; gameTabs?: GameTab[] }) {
-  const segs = useSelectedLayoutSegments();
+  const pathname = usePathname();
   const base = `/profile/${username}`;
-  const isLikes = segs[2] === 'likes';
-  const isGame = segs[2] === 'games';
-  const currentGameSlug = isGame ? (segs[3] || '') : '';
+  const likesPath = `${base}/likes`;
+  const gamesBasePath = `${base}/games`;
+
+  const isLikes = pathname === likesPath;
+  const isGameRoot = pathname === gamesBasePath;
+  const isGameSlug = pathname.startsWith(`${gamesBasePath}/`);
+  const isGame = isGameRoot || isGameSlug;
+  const currentGameSlug = isGameSlug ? pathname.replace(`${gamesBasePath}/`, "").split("/")[0] : "";
+
+  const baseItemClass = "-mb-px border-b-2 px-2 pb-2 text-sm transition-colors whitespace-nowrap";
+  const inactiveClass = "border-transparent text-muted-foreground hover:border-border hover:text-foreground";
+  const activeClass = "border-success font-semibold text-success";
+
   return (
-    <nav className="border-b mb-6 overflow-x-auto">
-      <ul className="flex gap-6 text-sm whitespace-nowrap">
-        <li>
-          <Link className={`inline-block py-3 ${!isLikes && !isGame ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={base}>
-            Articles
-          </Link>
-        </li>
-        <li>
-          <Link className={`inline-block py-3 ${isLikes ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={`${base}/likes`}>
-            Likes
-          </Link>
-        </li>
+    <div className="mb-6 w-full border-b border-border">
+      <nav className="mx-auto flex max-w-6xl gap-4 overflow-x-auto">
+        <Link
+          href={base}
+          className={`${baseItemClass} ${!isLikes && !isGame ? activeClass : inactiveClass}`}
+          aria-current={!isLikes && !isGame ? "page" : undefined}
+        >
+          Articles
+        </Link>
+        <Link
+          href={likesPath}
+          className={`${baseItemClass} ${isLikes ? activeClass : inactiveClass}`}
+          aria-current={isLikes ? "page" : undefined}
+        >
+          Likes
+        </Link>
         {gameTabs?.map((g) => (
-          <li key={g.slug}>
-            <Link className={`inline-block py-3 ${isGame && currentGameSlug === g.slug ? "font-semibold border-b-2" : "text-muted-foreground"}`} href={`${base}/games/${g.slug}`}>
-              {g.nameEn}
-            </Link>
-          </li>
+          <Link
+            key={g.slug}
+            href={`${gamesBasePath}/${g.slug}`}
+            className={`${baseItemClass} ${
+              isGame && currentGameSlug === g.slug ? activeClass : inactiveClass
+            }`}
+            aria-current={isGame && currentGameSlug === g.slug ? "page" : undefined}
+          >
+            {g.nameEn}
+          </Link>
         ))}
-      </ul>
-    </nav>
+      </nav>
+    </div>
   );
 }

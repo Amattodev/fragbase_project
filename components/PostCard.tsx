@@ -7,11 +7,22 @@ import type { Post } from "@/lib/services/posts";
 
 interface PostCardProps {
   post: Post;
+  linkMode?: "default" | "editDrafts";
+  origin?: "default" | "profile";
+  profileUsername?: string;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, linkMode = "default", origin = "default", profileUsername }: PostCardProps) {
+  const isDraft = post.status === "draft";
+  const basePath =
+    linkMode === "editDrafts" && isDraft ? `/articles/${post.id}/edit` : `/articles/${post.id}`;
+  const linkHref =
+    origin === "profile" && profileUsername
+      ? `${basePath}?from=profile&username=${encodeURIComponent(profileUsername)}`
+      : basePath;
+
   return (
-    <Link href={`/articles/${post.id}`}>
+    <Link href={linkHref}>
       <article className="h-full cursor-pointer rounded-xl border border-border bg-[var(--article-card)] p-6 shadow-sm transition-[background-color,border-color,box-shadow,transform] hover:border-primary/60 hover:shadow-[0_0_24px_rgba(0,245,255,0.25)] hover:-translate-y-[2px]">
         {/* ゲームカテゴリバッジ */}
         {post.gameCategories.length > 0 && (
@@ -76,7 +87,13 @@ export default function PostCard({ post }: PostCardProps) {
         {/* 投稿日時 + いいね数 */}
         <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex flex-col gap-[2px]">
-            <span className="text-[10px] text-muted-foreground/80">published</span>
+            <span
+              className={`text-[10px] ${
+                isDraft ? "text-destructive" : "text-muted-foreground/80"
+              }`}
+            >
+              {isDraft ? "下書き" : "公開中"}
+            </span>
             <span>{new Date(post.createdAt).toLocaleDateString("ja-JP")}</span>
           </span>
           {typeof post.likesCount === "number" && (

@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,6 +22,7 @@ interface ApiResponse {
 export default function ArticleEditPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [post, setPost] = useState<Post | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -46,6 +47,8 @@ export default function ArticleEditPage() {
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const articleId = params.id as string;
+  const from = searchParams.get("from");
+  const fromUsername = searchParams.get("username");
 
   // 記事データの取得
   useEffect(() => {
@@ -253,7 +256,11 @@ export default function ArticleEditPage() {
       await deletePostService(post.id);
       {
         console.log("記事が削除されました");
-        router.push("/");
+        if (from === "profile" && fromUsername) {
+          router.push(`/profile/${fromUsername}`);
+        } else {
+          router.push("/");
+        }
       }
     } catch (error) {
       console.error("削除エラー:", error);
