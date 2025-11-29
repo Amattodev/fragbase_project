@@ -31,6 +31,15 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #00f5ff;
+
+  /* Legacy color token aliases (for pages using --color-*) */
+  --color-bg: var(--background);
+  --color-text: var(--foreground);
+  --color-surface: var(--card);
+  --color-surface-hover: #12152e;
+  --color-subtle-text: var(--muted-foreground);
+  --color-accent: var(--primary);
+  --color-accent-hover: #24f7ff;
 }
 
 .dark {
@@ -56,6 +65,15 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #00f5ff;
+
+  /* Legacy color token aliases (for pages using --color-*) */
+  --color-bg: var(--background);
+  --color-text: var(--foreground);
+  --color-surface: var(--card);
+  --color-surface-hover: #12152e;
+  --color-subtle-text: var(--muted-foreground);
+  --color-accent: var(--primary);
+  --color-accent-hover: #24f7ff;
 }
 
 @layer base {

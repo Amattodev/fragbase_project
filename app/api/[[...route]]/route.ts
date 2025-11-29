@@ -7,6 +7,7 @@ import { getToken } from "next-auth/jwt";
 import { resolveGameCategoryCandidates } from "@/constants/gameCategoryMap";
 import { GAMES } from "@/constants/games";
 import {
+  follows,
   gameCategories,
   postCommentLikes,
   postComments,
@@ -15,6 +16,7 @@ import {
   posts,
   postTags,
   tags,
+  userProfiles,
   users,
 } from "@/db/schema";
 import { markdownToHtml } from "@/lib/markdown";
@@ -553,19 +555,6 @@ app.get("/posts/:id", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません" }, 404);
     }
 
-    // ユーザー情報を取得
-    let user = null;
-    if (post.userId) {
-      const userResult = await db.select().from(users).where(eq(users.id, post.userId)).get();
-      if (userResult) {
-        user = {
-          id: userResult.id,
-          name: userResult.name,
-          image: userResult.image,
-        };
-      }
-    }
-
     //タグ取得
     const postTagRelations = await db.select().from(postTags).where(eq(postTags.postId, id)).all();
 
@@ -596,11 +585,133 @@ app.get("/posts/:id", async (c) => {
       ok: true,
       post: {
         ...post,
-        user: user,
+        user: post.userId
+          ? await (async () => {
+              const userRow = await db.select().from(users).where(eq(users.id, post.userId!)).get();
+              if (!userRow) return null;
+              return {
+                id: userRow.id,
+                name: userRow.name,
+                image: userRow.image,
+              };
+            })()
+          : null,
         tags: postTagsResult,
         gameCategories: postGameCategoriesResult,
       },
     });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500,
+    );
+  }
+});
+
+// ユーザープロフィール取得（記事詳細ページ右カラム用）
+app.get("/users/:id/profile", async (c) => {
+  try {
+    const db = getDatabase();
+    const userId = c.req.param("id");
+    if (!userId) {
+      return c.json({ ok: false, error: "User ID is required" }, 400);
+    }
+
+    const [userRow, profileRow] = await Promise.all([
+      db.select().from(users).where(eq(users.id, userId)).get(),
+      db.select().from(userProfiles).where(eq(userProfiles.userId, userId)).get(),
+    ]);
+
+    if (!userRow) {
+      return c.json({ ok: false, error: "ユーザーが見つかりません" }, 404);
+    }
+
+    let socialLinks: Record<string, string> | null = null;
+    if (profileRow?.socialLinks) {
+      try {
+        socialLinks = JSON.parse(profileRow.socialLinks) as Record<string, string>;
+      } catch {
+        socialLinks = null;
+      }
+    }
+
+    const session = await auth();
+    const viewerId = session?.user?.id ?? null;
+
+    let isFollowing = false;
+    if (viewerId && viewerId !== userId) {
+      const followRow = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, userId)))
+        .get();
+      isFollowing = !!followRow;
+    }
+
+    return c.json({
+      ok: true,
+      profile: {
+        id: userRow.id,
+        name: userRow.name,
+        username: userRow.username,
+        image: userRow.image,
+        bio: profileRow?.bio ?? null,
+        socialLinks,
+        isMe: viewerId === userRow.id,
+        canFollow: !!viewerId && viewerId !== userRow.id,
+        isFollowing,
+      },
+    });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: (error as Error).message,
+      },
+      500,
+    );
+  }
+});
+
+// フォロー状態のトグル
+app.post("/users/:id/follow", async (c) => {
+  try {
+    const userId = c.req.param("id");
+    if (!userId) {
+      return c.json({ ok: false, error: "User ID is required" }, 400);
+    }
+
+    const session = await auth();
+    const viewerId = session?.user?.id;
+    if (!viewerId) {
+      return c.json({ ok: false, error: "ログインが必要です" }, 401);
+    }
+    if (viewerId === userId) {
+      return c.json({ ok: false, error: "自分自身はフォローできません" }, 400);
+    }
+
+    const db = getDatabase();
+    const existing = await db
+      .select()
+      .from(follows)
+      .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, userId)))
+      .get();
+
+    let following = false;
+    if (existing) {
+      await db
+        .delete(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, userId)));
+      following = false;
+    } else {
+      await db.insert(follows).values({ followerId: viewerId, followingId: userId });
+      following = true;
+    }
+
+    return c.json({ ok: true, isFollowing: following });
   } catch (error) {
     return c.json(
       {

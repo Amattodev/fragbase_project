@@ -1,16 +1,29 @@
 "use client";
 import { Heart } from "lucide-react";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import TopNavTabs from "@/app/_components/TopNavTabs";
+import { SocialIcons } from "@/components/profile/SocialIcons";
 import { Button } from "@/components/ui/button";
 import type { Post } from "@/lib/services/posts";
 import { getPost, getPostLikesCount, togglePostLike } from "@/lib/services/posts";
 
 import CommentSection from "../_components/CommentsSection";
+
+type AuthorProfile = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+  bio: string | null;
+  socialLinks?: Record<string, string> | null;
+  isMe: boolean;
+  canFollow: boolean;
+  isFollowing: boolean;
+};
 
 export default function ArticlePage() {
   const params = useParams();
@@ -21,6 +34,9 @@ export default function ArticlePage() {
   const [likesCount, setLikesCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [submittingLike, SetSubmittingLike] = useState(false);
+  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
+  const [authorLoading, setAuthorLoading] = useState(false);
+  const [followSubmitting, setFollowSubmitting] = useState(false);
 
   const articleId = params.id as string;
 
@@ -45,9 +61,37 @@ export default function ArticlePage() {
     if (articleId) load();
   }, [articleId]);
 
+  // 著者プロフィール取得
+  useEffect(() => {
+    const loadAuthorProfile = async () => {
+      if (!post?.user?.id) return;
+      setAuthorLoading(true);
+      try {
+        const res = await fetch(`/api/users/${post.user.id}/profile`);
+        if (!res.ok) {
+          console.error("著者プロフィール取得に失敗しました:", await res.text());
+          return;
+        }
+        const data = (await res.json()) as {
+          ok: boolean;
+          profile?: AuthorProfile;
+        };
+        if (data.ok && data.profile) {
+          setAuthorProfile(data.profile);
+        }
+      } catch (err) {
+        console.error("著者プロフィール取得エラー:", err);
+      } finally {
+        setAuthorLoading(false);
+      }
+    };
+    loadAuthorProfile();
+  }, [post?.user?.id]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="min-h-screen bg-background text-foreground">
+        <TopNavTabs active="home" />
         <div className="flex items-center justify-center pt-20">
           <div>記事を読み込み中...</div>
         </div>
@@ -57,7 +101,8 @@ export default function ArticlePage() {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="min-h-screen bg-background text-foreground">
+        <TopNavTabs active="home" />
         <div className="mx-auto max-w-4xl p-4 pt-20">
           <div className="text-center">
             <div className="mb-4 text-red-400">{error}</div>
@@ -113,6 +158,32 @@ export default function ArticlePage() {
       console.error("いいねエラー:", error);
     } finally {
       SetSubmittingLike(false);
+    }
+  };
+
+  const handleToggleFollow = async () => {
+    if (!authorProfile || !authorProfile.canFollow || followSubmitting) return;
+    setFollowSubmitting(true);
+    try {
+      const res = await fetch(`/api/users/${authorProfile.id}/follow`, {
+        method: "POST",
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        isFollowing?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        console.error("フォローの切り替えに失敗しました:", data.error || res.statusText);
+        return;
+      }
+      setAuthorProfile((prev) =>
+        prev ? { ...prev, isFollowing: Boolean(data.isFollowing) } : prev,
+      );
+    } catch (err) {
+      console.error("フォローの切り替えエラー:", err);
+    } finally {
+      setFollowSubmitting(false);
     }
   };
 
@@ -447,251 +518,87 @@ export default function ArticlePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      <main className="mx-auto max-w-4xl p-4 pt-8">
-        {/* 記事ヘッダー */}
-        <header className="mb-8">
-          {/* ゲームカテゴリ */}
-          {post.gameCategories.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {post.gameCategories.map((category) => (
-                <span
-                  key={category.id}
-                  className="rounded-full bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-black"
-                >
-                  {category.displayName}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* ユーザー情報 */}
-          {post.user && (
-            <div className="mb-4 flex items-center gap-3">
-              {post.user.image ? (
-                <Image
-                  src={post.user.image}
-                  alt={post.user.name || "ユーザー"}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600">
-                  <span className="text-sm text-gray-300">👤</span>
-                </div>
-              )}
-              <span className="text-gray-300">
-                投稿者:{" "}
-                <span className="font-medium text-[var(--color-text)]">
-                  {post.user.name || "匿名ユーザー"}
-                </span>
+    <div className="min-h-screen bg-background text-foreground">
+      <TopNavTabs active="home" />
+      {/* 記事ヘッダー（本文・サイドカラムの上） */}
+      <header className="mx-auto max-w-6xl px-4 text-center">
+        {/* ゲームカテゴリ */}
+        {post.gameCategories.length > 0 && (
+          <div className="mb-4 flex flex-wrap justify-center gap-2">
+            {post.gameCategories.map((category) => (
+              <span
+                key={category.id}
+                className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+              >
+                {category.displayName}
               </span>
-            </div>
-          )}
-
-          {/* タイトル */}
-          <h1 className="mb-4 text-3xl font-bold">{post.title}</h1>
-
-          {/* メタ情報 */}
-          <div className="mb-4 flex items-center gap-4 text-sm text-gray-400">
-            <div>投稿日: {new Date(post.createdAt).toLocaleDateString("ja-JP")}</div>
-            {post.updatedAt !== post.createdAt && (
-              <div>更新日: {new Date(post.updatedAt).toLocaleDateString("ja-JP")}</div>
-            )}
+            ))}
           </div>
+        )}
 
-          {/* タグ */}
-          {post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <span key={tag.id} className="rounded bg-gray-700 px-2 py-1 text-sm text-gray-300">
-                  #{tag.name}
-                </span>
-              ))}
-            </div>
+        {/* タイトル */}
+        <h1 className="mb-3 text-3xl font-bold tracking-tight">{post.title}</h1>
+
+        {/* メタ情報 */}
+        <div className="mb-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <div>投稿日: {new Date(post.createdAt).toLocaleDateString("ja-JP")}</div>
+          {post.updatedAt !== post.createdAt && (
+            <div>更新日: {new Date(post.updatedAt).toLocaleDateString("ja-JP")}</div>
           )}
-        </header>
+        </div>
 
-        {/* 記事本文 */}
-        <article className="prose prose-invert max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              // カスタムコンポーネントでスタイリング
-              h1: ({ children }) => (
-                <h1 className="mb-4 mt-8 border-b border-gray-600 pb-2 text-2xl font-bold text-[var(--color-text)]">
-                  {children}
-                </h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="mb-3 mt-6 text-xl font-semibold text-[var(--color-text)]">
-                  {children}
-                </h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="mb-2 mt-5 text-lg font-medium text-[var(--color-text)]">
-                  {children}
-                </h3>
-              ),
-              p: ({ children }) => {
-                const text = React.Children.toArray(children).join("");
+        {/* タグ */}
+        {post.tags.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {post.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground"
+              >
+                #{tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </header>
 
-                if (text.match(/\[(youtube|twitch|tiktok|x):[^\]]+\]/)) {
-                  return <VideoEmbedComponent text={text} />;
-                }
-                return (
-                  <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">{children}</p>
-                );
-              },
-              ul: ({ children }) => (
-                <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">
-                  {children}
-                </ol>
-              ),
-              li: ({ children }) => <li className="mb-1">{children}</li>,
-              blockquote: ({ children }) => (
-                <blockquote className="my-4 border-l-4 border-[var(--color-accent)] pl-4 italic text-[#D0D0D0]">
-                  {children}
-                </blockquote>
-              ),
-              code: ({ children, ...props }) => {
-                const isInline =
-                  props.className?.includes("inline") || !props.className?.includes("language-");
-                return isInline ? (
-                  <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
-                    {children}
-                  </code>
-                ) : (
-                  <code className="block overflow-x-auto rounded-lg bg-[var(--color-surface)] p-3 text-[var(--color-text)]">
-                    {children}
-                  </code>
-                );
-              },
-              pre: ({ children }) => (
-                <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">
-                  {children}
-                </pre>
-              ),
-              a: ({ href, children }) => (
-                <a
-                  href={href}
-                  className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {children}
-                </a>
-              ),
-              img: ({ src, alt }) => {
-                // 動画ファイルかどうかをチェック（より包括的）
-                const isVideo =
-                  src &&
-                  typeof src === "string" &&
-                  (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src) || // 拡張子チェック
-                    src.includes("/videos/") || // パスチェック
-                    /video/i.test(alt || "")); // alt属性チェック
-
-                if (isVideo) {
-                  return (
-                    <div className="my-4">
-                      <video
-                        src={src}
-                        className="h-auto max-w-full rounded-lg"
-                        controls
-                        preload="metadata"
-                        playsInline
-                        muted={false}
-                        onError={(e) => {
-                          console.error("動画読み込みエラー:", e);
-                          console.error("動画URL:", src);
-                          const video = e.target as HTMLVideoElement;
-                          console.error("ネットワーク状態:", video.networkState);
-                          console.error("エラーコード:", video.error?.code);
-                          console.error("エラーメッセージ:", video.error?.message);
-
-                          // エラー時にフォールバック表示
-                          video.style.display = "none";
-                          const errorDiv = document.createElement("div");
-                          errorDiv.className =
-                            "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded";
-                          errorDiv.innerHTML = `
-                            <p><strong>動画読み込みエラー</strong></p>
-                            <p>動画ファイルが見つかりません。</p>
-                            <p class="text-sm mt-2">URL: ${src}</p>
-                          `;
-                          video.parentNode?.insertBefore(errorDiv, video);
-                        }}
-                        onLoadStart={() => console.log("動画読み込み開始:", src)}
-                        onCanPlay={() => console.log("動画再生可能:", src)}
-                      >
-                        <p>お使いのブラウザは動画タグをサポートしていません。</p>
-                        {alt && <p>{alt}</p>}
-                      </video>
-                    </div>
-                  );
-                }
-
-                return <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />;
-              },
-              table: ({ children }) => (
-                <div className="my-4 overflow-x-auto">
-                  <table className="min-w-full border border-gray-600">{children}</table>
-                </div>
-              ),
-              th: ({ children }) => (
-                <th className="border border-gray-600 bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)]">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
-                  {children}
-                </td>
-              ),
-            }}
-          >
-            {post.content}
-          </ReactMarkdown>
-        </article>
-
-        <div className="mt-8 border-t border-gray-700 pt-6">
-          <div className="flex items-center gap-4">
+      <main className="mx-auto max-w-6xl p-4 pt-4">
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-[auto,1fr,260px] md:items-start">
+          {/* 左側: main の左に固定されるアクションカラム */}
+          <div className="flex w-16 flex-col items-center gap-3 md:sticky md:top-28 md:w-20 md:pt-10">
             {/* いいねボタン */}
             <button
               onClick={handleLike}
               disabled={submittingLike}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 transition-colors ${
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
                 isLiked
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  ? "border-pink-500/70 bg-pink-500/10 text-pink-400"
+                  : "border-border bg-background/40 text-muted-foreground hover:border-primary/60 hover:text-primary"
               }`}
             >
-              <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
+              <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
               <span>{likesCount}</span>
             </button>
             {/* シェアボタン */}
             <button
               onClick={handleShareOnX}
-              className="flex items-center gap-2 rounded-full bg-black px-4 py-2 text-white transition-colors hover:bg-gray-800"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
               title="Xでシェア"
+              aria-label="Xでシェア"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
-              <span>シェア</span>
             </button>
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-2 rounded-full bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
               title="リンクをコピー"
+              aria-label="リンクをコピー"
             >
               <svg
-                width="16"
-                height="16"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -699,34 +606,228 @@ export default function ArticlePage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path
-                  d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 
-            0-7.07-7.07l-1.72 1.71"
-                />
-                <path
-                  d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 
-            7.07l1.71-1.71"
-                />
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
               </svg>
-              <span>リンクをコピー</span>
             </button>
           </div>
-        </div>
 
-        <CommentSection postId={post.id} />
+          {/* 中央: 記事全体（本文 + コメント） */}
+          <div className="flex-1">
+            <div className="rounded-xl border border-border bg-[var(--article-card)] px-4 py-6 shadow-sm">
+              {/* 記事本文 */}
+              <div className="mt-4">
+                <article className="prose prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      // カスタムコンポーネントでスタイリング
+                      h1: ({ children }) => (
+                        <h1 className="mb-4 mt-8 border-b border-gray-600 pb-2 text-2xl font-bold text-[var(--color-text)]">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="mb-3 mt-6 border-l-2 border-primary/60 pl-3 text-xl font-semibold text-[var(--color-text)]">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="mb-2 mt-5 border-l border-primary/40 pl-3 text-lg font-medium text-[var(--color-text)]">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => {
+                        const text = React.Children.toArray(children).join("");
 
-        {/* フッター */}
-        <footer className="mt-12 border-t border-gray-700 pt-8">
-          <div className="flex justify-center">
-            <Button
-              onClick={() => router.push("/")}
-              variant="outline"
-              className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-            >
-              記事一覧に戻る
-            </Button>
+                        if (text.match(/\[(youtube|twitch|tiktok|x):[^\]]+\]/)) {
+                          return <VideoEmbedComponent text={text} />;
+                        }
+                        return (
+                          <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">
+                            {children}
+                          </p>
+                        );
+                      },
+                      ul: ({ children }) => (
+                        <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="my-4 rounded-lg border border-primary/30 bg-card/40 px-4 py-3 text-sm italic text-[#D0D0D0]">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children, ...props }) => {
+                        const isInline =
+                          props.className?.includes("inline") ||
+                          !props.className?.includes("language-");
+                        return isInline ? (
+                          <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
+                            {children}
+                          </code>
+                        ) : (
+                          <code className="block overflow-x-auto rounded-lg bg-[var(--color-surface)] p-3 text-[var(--color-text)]">
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre: ({ children }) => (
+                        <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">
+                          {children}
+                        </pre>
+                      ),
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      img: ({ src, alt }) => {
+                        // 動画ファイルかどうかをチェック（より包括的）
+                        const isVideo =
+                          src &&
+                          typeof src === "string" &&
+                          (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src) || // 拡張子チェック
+                            src.includes("/videos/") || // パスチェック
+                            /video/i.test(alt || "")); // alt属性チェック
+
+                        if (isVideo) {
+                          return (
+                            <div className="my-4">
+                              <video
+                                src={src}
+                                className="h-auto max-w-full rounded-lg"
+                                controls
+                                preload="metadata"
+                                playsInline
+                                muted={false}
+                                onError={(e) => {
+                                  console.error("動画読み込みエラー:", e);
+                                  console.error("動画URL:", src);
+                                  const video = e.target as HTMLVideoElement;
+                                  console.error("ネットワーク状態:", video.networkState);
+                                  console.error("エラーコード:", video.error?.code);
+                                  console.error("エラーメッセージ:", video.error?.message);
+
+                                  // エラー時にフォールバック表示
+                                  video.style.display = "none";
+                                  const errorDiv = document.createElement("div");
+                                  errorDiv.className =
+                                    "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded";
+                                  errorDiv.innerHTML = `
+                            <p><strong>動画読み込みエラー</strong></p>
+                            <p>動画ファイルが見つかりません。</p>
+                            <p class="text-sm mt-2">URL: ${src}</p>
+                          `;
+                                  video.parentNode?.insertBefore(errorDiv, video);
+                                }}
+                                onLoadStart={() => console.log("動画読み込み開始:", src)}
+                                onCanPlay={() => console.log("動画再生可能:", src)}
+                              >
+                                <p>お使いのブラウザは動画タグをサポートしていません。</p>
+                                {alt && <p>{alt}</p>}
+                              </video>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />
+                        );
+                      },
+                      table: ({ children }) => (
+                        <div className="my-4 overflow-x-auto">
+                          <table className="min-w-full border border-gray-600">{children}</table>
+                        </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-gray-600 bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)]">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
+                          {children}
+                        </td>
+                      ),
+                    }}
+                  >
+                    {post.content}
+                  </ReactMarkdown>
+                </article>
+              </div>
+
+              <CommentSection postId={post.id} />
+            </div>
           </div>
-        </footer>
+
+          {/* 右側: 著者プロフィールカラム */}
+          {post.user && (
+            <aside className="md:sticky md:top-28 md:pt-10">
+              <div className="rounded-xl border border-border bg-[var(--article-card)] p-4 text-sm shadow-sm">
+                <div className="flex flex-col items-center text-center">
+                  {authorProfile?.image || post.user.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={(authorProfile?.image || post.user.image) as string}
+                      alt={authorProfile?.name || post.user.name || "ユーザー"}
+                      className="mb-3 h-16 w-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-600">
+                      <span className="text-lg text-gray-300">👤</span>
+                    </div>
+                  )}
+                  <div className="mb-1 text-base font-semibold">
+                    {authorProfile?.name || post.user.name || "匿名ユーザー"}
+                  </div>
+                  {authorProfile?.username && (
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      @{authorProfile.username}
+                    </div>
+                  )}
+                  {authorProfile?.bio && (
+                    <p className="mb-3 whitespace-pre-wrap text-xs text-[var(--color-subtle-text)]">
+                      {authorProfile.bio}
+                    </p>
+                  )}
+                  <SocialIcons links={authorProfile?.socialLinks ?? undefined} />
+
+                  {authorProfile?.canFollow && (
+                    <button
+                      type="button"
+                      onClick={handleToggleFollow}
+                      disabled={followSubmitting}
+                      className={`mt-4 inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
+                        authorProfile.isFollowing
+                          ? "border border-border bg-transparent text-muted-foreground hover:border-primary/60 hover:bg-background/60"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      } disabled:opacity-60`}
+                    >
+                      {followSubmitting
+                        ? "処理中..."
+                        : authorProfile.isFollowing
+                          ? "フォロー中"
+                          : "フォロー"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
       </main>
     </div>
   );
