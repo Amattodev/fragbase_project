@@ -1,6 +1,5 @@
 "use client";
 import { Heart } from "lucide-react";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -169,7 +168,11 @@ export default function ArticlePage() {
       const res = await fetch(`/api/users/${authorProfile.id}/follow`, {
         method: "POST",
       });
-      const data = await res.json();
+      const data = (await res.json()) as {
+        ok?: boolean;
+        isFollowing?: boolean;
+        error?: string;
+      };
       if (!res.ok || !data.ok) {
         console.error("フォローの切り替えに失敗しました:", data.error || res.statusText);
         return;
@@ -562,7 +565,7 @@ export default function ArticlePage() {
       <main className="mx-auto max-w-6xl p-4 pt-4">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[auto,1fr,260px] md:items-start">
           {/* 左側: main の左に固定されるアクションカラム */}
-          <div className="flex w-16 flex-col items-center gap-3 md:w-20 md:pt-10 md:sticky md:top-28">
+          <div className="flex w-16 flex-col items-center gap-3 md:sticky md:top-28 md:w-20 md:pt-10">
             {/* いいねボタン */}
             <button
               onClick={handleLike}
@@ -618,44 +621,44 @@ export default function ArticlePage() {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                  // カスタムコンポーネントでスタイリング
-                  h1: ({ children }) => (
-                    <h1 className="mb-4 mt-8 border-b border-gray-600 pb-2 text-2xl font-bold text-[var(--color-text)]">
-                      {children}
-                    </h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2 className="mb-3 mt-6 border-l-2 border-primary/60 pl-3 text-xl font-semibold text-[var(--color-text)]">
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="mb-2 mt-5 border-l border-primary/40 pl-3 text-lg font-medium text-[var(--color-text)]">
-                      {children}
-                    </h3>
-                  ),
-                  p: ({ children }) => {
-                    const text = React.Children.toArray(children).join("");
+                      // カスタムコンポーネントでスタイリング
+                      h1: ({ children }) => (
+                        <h1 className="mb-4 mt-8 border-b border-gray-600 pb-2 text-2xl font-bold text-[var(--color-text)]">
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="mb-3 mt-6 border-l-2 border-primary/60 pl-3 text-xl font-semibold text-[var(--color-text)]">
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="mb-2 mt-5 border-l border-primary/40 pl-3 text-lg font-medium text-[var(--color-text)]">
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children }) => {
+                        const text = React.Children.toArray(children).join("");
 
-                    if (text.match(/\[(youtube|twitch|tiktok|x):[^\]]+\]/)) {
-                      return <VideoEmbedComponent text={text} />;
-                    }
-                    return (
-                      <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">
-                        {children}
-                      </p>
-                    );
-                  },
-                  ul: ({ children }) => (
-                    <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">
-                      {children}
-                    </ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">
-                      {children}
-                    </ol>
-                  ),
+                        if (text.match(/\[(youtube|twitch|tiktok|x):[^\]]+\]/)) {
+                          return <VideoEmbedComponent text={text} />;
+                        }
+                        return (
+                          <p className="mb-4 leading-relaxed text-[var(--color-subtle-text)]">
+                            {children}
+                          </p>
+                        );
+                      },
+                      ul: ({ children }) => (
+                        <ul className="mb-4 list-disc pl-6 text-[var(--color-subtle-text)]">
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({ children }) => (
+                        <ol className="mb-4 list-decimal pl-6 text-[var(--color-subtle-text)]">
+                          {children}
+                        </ol>
+                      ),
                       li: ({ children }) => <li className="mb-1">{children}</li>,
                       blockquote: ({ children }) => (
                         <blockquote className="my-4 rounded-lg border border-primary/30 bg-card/40 px-4 py-3 text-sm italic text-[#D0D0D0]">
@@ -663,9 +666,9 @@ export default function ArticlePage() {
                         </blockquote>
                       ),
                       code: ({ children, ...props }) => {
-                    const isInline =
-                      props.className?.includes("inline") ||
-                      !props.className?.includes("language-");
+                        const isInline =
+                          props.className?.includes("inline") ||
+                          !props.className?.includes("language-");
                         return isInline ? (
                           <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
                             {children}
@@ -692,13 +695,13 @@ export default function ArticlePage() {
                         </a>
                       ),
                       img: ({ src, alt }) => {
-                    // 動画ファイルかどうかをチェック（より包括的）
-                    const isVideo =
-                      src &&
-                      typeof src === "string" &&
-                      (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src) || // 拡張子チェック
-                        src.includes("/videos/") || // パスチェック
-                        /video/i.test(alt || "")); // alt属性チェック
+                        // 動画ファイルかどうかをチェック（より包括的）
+                        const isVideo =
+                          src &&
+                          typeof src === "string" &&
+                          (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(src) || // 拡張子チェック
+                            src.includes("/videos/") || // パスチェック
+                            /video/i.test(alt || "")); // alt属性チェック
 
                         if (isVideo) {
                           return (
@@ -711,19 +714,19 @@ export default function ArticlePage() {
                                 playsInline
                                 muted={false}
                                 onError={(e) => {
-                              console.error("動画読み込みエラー:", e);
-                              console.error("動画URL:", src);
-                              const video = e.target as HTMLVideoElement;
-                              console.error("ネットワーク状態:", video.networkState);
-                              console.error("エラーコード:", video.error?.code);
-                              console.error("エラーメッセージ:", video.error?.message);
+                                  console.error("動画読み込みエラー:", e);
+                                  console.error("動画URL:", src);
+                                  const video = e.target as HTMLVideoElement;
+                                  console.error("ネットワーク状態:", video.networkState);
+                                  console.error("エラーコード:", video.error?.code);
+                                  console.error("エラーメッセージ:", video.error?.message);
 
-                              // エラー時にフォールバック表示
-                              video.style.display = "none";
-                              const errorDiv = document.createElement("div");
-                              errorDiv.className =
-                                "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded";
-                              errorDiv.innerHTML = `
+                                  // エラー時にフォールバック表示
+                                  video.style.display = "none";
+                                  const errorDiv = document.createElement("div");
+                                  errorDiv.className =
+                                    "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded";
+                                  errorDiv.innerHTML = `
                             <p><strong>動画読み込みエラー</strong></p>
                             <p>動画ファイルが見つかりません。</p>
                             <p class="text-sm mt-2">URL: ${src}</p>
@@ -772,7 +775,7 @@ export default function ArticlePage() {
 
           {/* 右側: 著者プロフィールカラム */}
           {post.user && (
-            <aside className="md:pt-10 md:sticky md:top-28">
+            <aside className="md:sticky md:top-28 md:pt-10">
               <div className="rounded-xl border border-border bg-[var(--article-card)] p-4 text-sm shadow-sm">
                 <div className="flex flex-col items-center text-center">
                   {authorProfile?.image || post.user.image ? (
@@ -791,7 +794,9 @@ export default function ArticlePage() {
                     {authorProfile?.name || post.user.name || "匿名ユーザー"}
                   </div>
                   {authorProfile?.username && (
-                    <div className="mb-2 text-xs text-muted-foreground">@{authorProfile.username}</div>
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      @{authorProfile.username}
+                    </div>
                   )}
                   {authorProfile?.bio && (
                     <p className="mb-3 whitespace-pre-wrap text-xs text-[var(--color-subtle-text)]">
@@ -814,8 +819,8 @@ export default function ArticlePage() {
                       {followSubmitting
                         ? "処理中..."
                         : authorProfile.isFollowing
-                        ? "フォロー中"
-                        : "フォロー"}
+                          ? "フォロー中"
+                          : "フォロー"}
                     </button>
                   )}
                 </div>
