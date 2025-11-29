@@ -91,7 +91,7 @@ export default function ArticlePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="min-h-screen bg-background text-foreground">
         <TopNavTabs active="home" />
         <div className="flex items-center justify-center pt-20">
           <div>記事を読み込み中...</div>
@@ -102,7 +102,7 @@ export default function ArticlePage() {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <div className="min-h-screen bg-background text-foreground">
         <TopNavTabs active="home" />
         <div className="mx-auto max-w-4xl p-4 pt-20">
           <div className="text-center">
@@ -515,7 +515,7 @@ export default function ArticlePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="min-h-screen bg-background text-foreground">
       <TopNavTabs active="home" />
       {/* 記事ヘッダー（本文・サイドカラムの上） */}
       <header className="mx-auto max-w-6xl px-4 text-center">
@@ -525,7 +525,7 @@ export default function ArticlePage() {
             {post.gameCategories.map((category) => (
               <span
                 key={category.id}
-                className="rounded-full bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-black"
+                className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
               >
                 {category.displayName}
               </span>
@@ -534,10 +534,10 @@ export default function ArticlePage() {
         )}
 
         {/* タイトル */}
-        <h1 className="mb-4 text-3xl font-bold">{post.title}</h1>
+        <h1 className="mb-3 text-3xl font-bold tracking-tight">{post.title}</h1>
 
         {/* メタ情報 */}
-        <div className="mb-4 flex items-center justify-center gap-4 text-sm text-gray-400">
+        <div className="mb-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
           <div>投稿日: {new Date(post.createdAt).toLocaleDateString("ja-JP")}</div>
           {post.updatedAt !== post.createdAt && (
             <div>更新日: {new Date(post.updatedAt).toLocaleDateString("ja-JP")}</div>
@@ -550,7 +550,7 @@ export default function ArticlePage() {
             {post.tags.map((tag) => (
               <span
                 key={tag.id}
-                className="rounded bg-gray-700 px-2 py-1 text-sm text-gray-300"
+                className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground"
               >
                 #{tag.name}
               </span>
@@ -562,61 +562,62 @@ export default function ArticlePage() {
       <main className="mx-auto max-w-6xl p-4 pt-4">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[auto,1fr,260px] md:items-start">
           {/* 左側: main の左に固定されるアクションカラム */}
-          <div className="flex w-16 flex-col items-center gap-3 md:w-20 md:pt-10">
-          {/* いいねボタン */}
-          <button
-            onClick={handleLike}
-            disabled={submittingLike}
-            className={`flex items-center gap-1 text-base transition-colors disabled:opacity-50 ${
-              isLiked
-                ? "text-red-500 hover:text-red-400"
-                : "text-gray-300 hover:text-white"
-            }`}
-          >
-            <Heart size={20} fill={isLiked ? "currentColor" : "none"} />
-            <span>{likesCount}</span>
-          </button>
-          {/* シェアボタン */}
-          <button
-            onClick={handleShareOnX}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-white transition-colors hover:bg-gray-800"
-            title="Xでシェア"
-            aria-label="Xでシェア"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
-          </button>
-          <button
-            onClick={handleCopyLink}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-700 text-white transition-colors hover:bg-gray-600"
-            title="リンクをコピー"
-            aria-label="リンクをコピー"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex w-16 flex-col items-center gap-3 md:w-20 md:pt-10 md:sticky md:top-28">
+            {/* いいねボタン */}
+            <button
+              onClick={handleLike}
+              disabled={submittingLike}
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
+                isLiked
+                  ? "border-pink-500/70 bg-pink-500/10 text-pink-400"
+                  : "border-border bg-background/40 text-muted-foreground hover:border-primary/60 hover:text-primary"
+              }`}
             >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-          </button>
+              <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
+              <span>{likesCount}</span>
+            </button>
+            {/* シェアボタン */}
+            <button
+              onClick={handleShareOnX}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+              title="Xでシェア"
+              aria-label="Xでシェア"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+              title="リンクをコピー"
+              aria-label="リンクをコピー"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </button>
           </div>
 
-          {/* 中央: 記事全体（本文 + コメント + フッター） */}
+          {/* 中央: 記事全体（本文 + コメント） */}
           <div className="flex-1">
-            {/* 記事本文 */}
-            <div className="mt-4 pt-6">
-            <article className="prose prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
+            <div className="rounded-xl border border-border bg-[var(--article-card)] px-4 py-6 shadow-sm">
+              {/* 記事本文 */}
+              <div className="mt-4">
+                <article className="prose prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
                   // カスタムコンポーネントでスタイリング
                   h1: ({ children }) => (
                     <h1 className="mb-4 mt-8 border-b border-gray-600 pb-2 text-2xl font-bold text-[var(--color-text)]">
@@ -624,12 +625,12 @@ export default function ArticlePage() {
                     </h1>
                   ),
                   h2: ({ children }) => (
-                    <h2 className="mb-3 mt-6 text-xl font-semibold text-[var(--color-text)]">
+                    <h2 className="mb-3 mt-6 border-l-2 border-primary/60 pl-3 text-xl font-semibold text-[var(--color-text)]">
                       {children}
                     </h2>
                   ),
                   h3: ({ children }) => (
-                    <h3 className="mb-2 mt-5 text-lg font-medium text-[var(--color-text)]">
+                    <h3 className="mb-2 mt-5 border-l border-primary/40 pl-3 text-lg font-medium text-[var(--color-text)]">
                       {children}
                     </h3>
                   ),
@@ -655,42 +656,42 @@ export default function ArticlePage() {
                       {children}
                     </ol>
                   ),
-                  li: ({ children }) => <li className="mb-1">{children}</li>,
-                  blockquote: ({ children }) => (
-                    <blockquote className="my-4 border-l-4 border-[var(--color-accent)] pl-4 italic text-[#D0D0D0]">
-                      {children}
-                    </blockquote>
-                  ),
-                  code: ({ children, ...props }) => {
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="my-4 rounded-lg border border-primary/30 bg-card/40 px-4 py-3 text-sm italic text-[#D0D0D0]">
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ children, ...props }) => {
                     const isInline =
                       props.className?.includes("inline") ||
                       !props.className?.includes("language-");
-                    return isInline ? (
-                      <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
-                        {children}
-                      </code>
-                    ) : (
-                      <code className="block overflow-x-auto rounded-lg bg-[var(--color-surface)] p-3 text-[var(--color-text)]">
-                        {children}
-                      </code>
-                    );
-                  },
-                  pre: ({ children }) => (
-                    <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">
-                      {children}
-                    </pre>
-                  ),
-                  a: ({ href, children }) => (
-                    <a
-                      href={href}
-                      className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {children}
-                    </a>
-                  ),
-                  img: ({ src, alt }) => {
+                        return isInline ? (
+                          <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-sm text-[var(--color-accent)]">
+                            {children}
+                          </code>
+                        ) : (
+                          <code className="block overflow-x-auto rounded-lg bg-[var(--color-surface)] p-3 text-[var(--color-text)]">
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre: ({ children }) => (
+                        <pre className="mb-4 overflow-x-auto rounded-lg bg-[var(--color-surface)] p-4">
+                          {children}
+                        </pre>
+                      ),
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          className="text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)]"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {children}
+                        </a>
+                      ),
+                      img: ({ src, alt }) => {
                     // 動画ファイルかどうかをチェック（より包括的）
                     const isVideo =
                       src &&
@@ -699,17 +700,17 @@ export default function ArticlePage() {
                         src.includes("/videos/") || // パスチェック
                         /video/i.test(alt || "")); // alt属性チェック
 
-                    if (isVideo) {
-                      return (
-                        <div className="my-4">
-                          <video
-                            src={src}
-                            className="h-auto max-w-full rounded-lg"
-                            controls
-                            preload="metadata"
-                            playsInline
-                            muted={false}
-                            onError={(e) => {
+                        if (isVideo) {
+                          return (
+                            <div className="my-4">
+                              <video
+                                src={src}
+                                className="h-auto max-w-full rounded-lg"
+                                controls
+                                preload="metadata"
+                                playsInline
+                                muted={false}
+                                onError={(e) => {
                               console.error("動画読み込みエラー:", e);
                               console.error("動画URL:", src);
                               const video = e.target as HTMLVideoElement;
@@ -727,64 +728,52 @@ export default function ArticlePage() {
                             <p>動画ファイルが見つかりません。</p>
                             <p class="text-sm mt-2">URL: ${src}</p>
                           `;
-                              video.parentNode?.insertBefore(errorDiv, video);
-                            }}
-                            onLoadStart={() => console.log("動画読み込み開始:", src)}
-                            onCanPlay={() => console.log("動画再生可能:", src)}
-                          >
-                            <p>お使いのブラウザは動画タグをサポートしていません。</p>
-                            {alt && <p>{alt}</p>}
-                          </video>
+                                  video.parentNode?.insertBefore(errorDiv, video);
+                                }}
+                                onLoadStart={() => console.log("動画読み込み開始:", src)}
+                                onCanPlay={() => console.log("動画再生可能:", src)}
+                              >
+                                <p>お使いのブラウザは動画タグをサポートしていません。</p>
+                                {alt && <p>{alt}</p>}
+                              </video>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />
+                        );
+                      },
+                      table: ({ children }) => (
+                        <div className="my-4 overflow-x-auto">
+                          <table className="min-w-full border border-gray-600">{children}</table>
                         </div>
-                      );
-                    }
-
-                    return (
-                      <img src={src} alt={alt} className="my-4 h-auto max-w-full rounded-lg" />
-                    );
-                  },
-                  table: ({ children }) => (
-                    <div className="my-4 overflow-x-auto">
-                      <table className="min-w-full border border-gray-600">{children}</table>
-                    </div>
-                  ),
-                  th: ({ children }) => (
-                    <th className="border border-gray-600 bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)]">
-                      {children}
-                    </th>
-                  ),
-                  td: ({ children }) => (
-                    <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
-                      {children}
-                    </td>
-                  ),
-                }}
-              >
-                {post.content}
-              </ReactMarkdown>
-            </article>
-            </div>
-
-            <CommentSection postId={post.id} />
-
-            {/* フッター */}
-            <footer className="mt-12 border-t border-gray-700 pt-8">
-              <div className="flex justify-center">
-                <Button
-                  onClick={() => router.push("/")}
-                  variant="outline"
-                  className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
-                >
-                  記事一覧に戻る
-                </Button>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border border-gray-600 bg-[var(--color-surface)] px-4 py-2 font-semibold text-[var(--color-text)]">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border border-gray-600 px-4 py-2 text-[var(--color-subtle-text)]">
+                          {children}
+                        </td>
+                      ),
+                    }}
+                  >
+                    {post.content}
+                  </ReactMarkdown>
+                </article>
               </div>
-            </footer>
+
+              <CommentSection postId={post.id} />
+            </div>
           </div>
 
           {/* 右側: 著者プロフィールカラム */}
           {post.user && (
-            <aside className="md:pt-10">
-              <div className="rounded-xl border border-gray-700 bg-[var(--color-surface)] p-4 text-sm">
+            <aside className="md:pt-10 md:sticky md:top-28">
+              <div className="rounded-xl border border-border bg-[var(--article-card)] p-4 text-sm shadow-sm">
                 <div className="flex flex-col items-center text-center">
                   {authorProfile?.image || post.user.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -802,7 +791,7 @@ export default function ArticlePage() {
                     {authorProfile?.name || post.user.name || "匿名ユーザー"}
                   </div>
                   {authorProfile?.username && (
-                    <div className="mb-2 text-xs text-gray-400">@{authorProfile.username}</div>
+                    <div className="mb-2 text-xs text-muted-foreground">@{authorProfile.username}</div>
                   )}
                   {authorProfile?.bio && (
                     <p className="mb-3 whitespace-pre-wrap text-xs text-[var(--color-subtle-text)]">
@@ -818,8 +807,8 @@ export default function ArticlePage() {
                       disabled={followSubmitting}
                       className={`mt-4 inline-flex h-9 w-full items-center justify-center rounded-full px-3 text-xs font-medium transition-colors ${
                         authorProfile.isFollowing
-                          ? "border border-gray-500 bg-transparent text-gray-200 hover:bg-gray-800"
-                          : "bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
+                          ? "border border-border bg-transparent text-muted-foreground hover:border-primary/60 hover:bg-background/60"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
                       } disabled:opacity-60`}
                     >
                       {followSubmitting
