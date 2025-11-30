@@ -6,6 +6,7 @@ import SessionProvider from "@/components/SessionProvider";
 
 import type { Metadata } from "next";
 import "./globals.css";
+import "react-easy-crop/react-easy-crop.css";
 
 const inter = Inter({ subsets: ["latin"] });
 

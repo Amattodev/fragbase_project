@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, Gamepad2, LogOut, Pencil, User } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -131,16 +131,16 @@ export default function Header() {
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
-                    <Settings size={16} className="mr-2" />
-                    設定
+                    <Pencil size={16} className="mr-2" />
+                    プロフィールを編集
                   </Link>
                   <Link
                     href="/settings/games"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowDropdown(false)}
                   >
-                    <Settings size={16} className="mr-2" />
-                    ゲーム設定
+                    <Gamepad2 size={16} className="mr-2" />
+                    ゲームプロフィール編集
                   </Link>
                   <hr className="my-1" />
                   <button

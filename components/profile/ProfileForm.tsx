@@ -27,7 +27,7 @@ export function ProfileForm({ initial }: { initial: { name: string; username: st
           }
         });
       }}
-      className="space-y-4 max-w-xl"
+      className="space-y-4 w-full max-w-xl"
     >
       <div>
         <label className="block text-sm mb-1">表示名</label>
@@ -51,7 +51,7 @@ export function ProfileForm({ initial }: { initial: { name: string; username: st
         <div><label className="block text-sm mb-1">Steam</label><Input name="steam" defaultValue={initial.socialLinks?.steam ?? ""} placeholder="https://steamcommunity.com/..." /></div>
         <div><label className="block text-sm mb-1">Discord</label><Input name="discord" defaultValue={initial.socialLinks?.discord ?? ""} placeholder="https://discord.gg/..." /></div>
       </fieldset>
-      <Button type="submit" disabled={pending}>{pending ? "保存中..." : "保存"}</Button>
+      <Button type="submit" disabled={pending}>{pending ? "更新中..." : "更新"}</Button>
     </form>
   );
 }

@@ -148,6 +148,50 @@ app.get("/images/upload-token", async (c) => {
   }
 });
 
+// 開発・ローカル環境向けの画像アップロード（Cloudflare Images が未設定の場合）
+// Cloudflare Images のレスポンス形式に近いJSONを返し、data URL を variants[0] に格納する
+app.post("/images/local-upload", async (c) => {
+  try {
+    const req = c.req.raw;
+    const formData = await req.formData();
+    const file = formData.get("file");
+
+    if (!(file instanceof Blob)) {
+      console.error("[LocalImageUpload] file field is missing or invalid");
+      return c.json(
+        {
+          success: false,
+          errors: ["file field is required"],
+        },
+        400,
+      );
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    // Node.js 環境を想定して Buffer を使用（開発モードのみで利用される）
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const mime = (file as any).type || "image/png";
+    const dataUrl = `data:${mime};base64,${base64}`;
+
+    return c.json({
+      success: true,
+      result: {
+        id: `local-${Date.now()}`,
+        variants: [dataUrl],
+      },
+    });
+  } catch (error) {
+    console.error("[LocalImageUpload] failed:", error);
+    return c.json(
+      {
+        success: false,
+        errors: [(error as Error)?.message ?? "unknown error"],
+      },
+      500,
+    );
+  }
+});
+
 // 動画をR2にアップロードするためのURL発行
 app.get("/videos/upload-token", async (c) => {
   console.log("動画アップロードトークン要求を受信");
