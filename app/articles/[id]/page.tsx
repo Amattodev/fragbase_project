@@ -1,11 +1,12 @@
 "use client";
-import { Heart } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { Heart, MoreHorizontal } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import TopNavTabs from "@/app/_components/TopNavTabs";
+import { deletePostAction } from "@/app/(actions)/posts";
 import { SocialIcons } from "@/components/profile/SocialIcons";
 import { Button } from "@/components/ui/button";
 import type { Post } from "@/lib/services/posts";
@@ -28,6 +29,7 @@ type AuthorProfile = {
 export default function ArticlePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,11 @@ export default function ArticlePage() {
   const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
   const [authorLoading, setAuthorLoading] = useState(false);
   const [followSubmitting, setFollowSubmitting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const from = searchParams.get("from");
+  const fromUsername = searchParams.get("username");
 
   const articleId = params.id as string;
 
@@ -88,6 +95,21 @@ export default function ArticlePage() {
     loadAuthorProfile();
   }, [post?.user?.id]);
 
+  // 記事操作メニューの外側クリック検知
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
@@ -136,6 +158,36 @@ export default function ArticlePage() {
         // フォールバック: 手動でコピーできるようにプロンプト表示
         prompt("以下のテキストをコピーしてください:", text);
       });
+  };
+
+  const handleEditArticle = () => {
+    if (!post) return;
+    setMenuOpen(false);
+    router.push(`/articles/${post.id}/edit`);
+  };
+
+  const handleDeleteArticle = async () => {
+    if (!post || deleting) return;
+    const ok = window.confirm("この記事を削除しますか？");
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deletePostAction(post.id, {
+        username: from === "profile" ? fromUsername : null,
+      });
+      setMenuOpen(false);
+      if (from === "profile" && fromUsername && authorProfile?.isMe) {
+        router.push(`/profile/${fromUsername}`);
+      } else {
+        router.push("/");
+      }
+      router.refresh();
+    } catch (err) {
+      console.error("記事削除エラー:", err);
+      alert("記事の削除に失敗しました。しばらくしてから再度お試しください。");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   //いいね機能
@@ -610,6 +662,39 @@ export default function ArticlePage() {
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
               </svg>
             </button>
+            {/* 記事操作メニュー（著者のみ） */}
+            {authorProfile?.isMe && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="mt-2 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+                  title="記事の操作"
+                  aria-label="記事の操作"
+                >
+                  <MoreHorizontal size={18} />
+                </button>
+                {menuOpen && (
+                  <div className="absolute left-10 top-0 z-30 min-w-[140px] rounded-md border border-border bg-card py-1 text-xs shadow-[0_0_18px_rgba(0,0,0,0.8)]">
+                    <button
+                      type="button"
+                      onClick={handleEditArticle}
+                      className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-foreground hover:bg-card/80"
+                    >
+                      編集
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteArticle}
+                      disabled={deleting}
+                      className="flex w-full cursor-pointer items-center px-3 py-2 text-left text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                    >
+                      削除
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 中央: 記事全体（本文 + コメント） */}

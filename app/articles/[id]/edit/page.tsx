@@ -1,13 +1,14 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import MultiSelect from "@/components/MultiSelect";
 import { Button } from "@/components/ui/button";
+import { deletePostAction, revalidatePostListsAction } from "@/app/(actions)/posts";
 import { Input } from "@/components/ui/input";
-import { getPost, searchTags, updatePost as updatePostService, deletePost as deletePostService } from "@/lib/services/posts";
+import { getPost, searchTags, updatePost as updatePostService } from "@/lib/services/posts";
 import { getGamesCatalog } from "@/lib/services/games/catalog";
 import type { Post } from "@/lib/services/posts";
 
@@ -22,6 +23,7 @@ interface ApiResponse {
 export default function ArticleEditPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [post, setPost] = useState<Post | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -46,6 +48,8 @@ export default function ArticleEditPage() {
   const [status, setStatus] = useState<"draft" | "published">("draft");
 
   const articleId = params.id as string;
+  const from = searchParams.get("from");
+  const fromUsername = searchParams.get("username");
 
   // 記事データの取得
   useEffect(() => {
@@ -204,6 +208,11 @@ export default function ArticleEditPage() {
         // 保存後の比較用に、originalContent 側も slug ベースで保持
         setOriginalContent({ title, content, status, tags, gameCategories: gameSlugs });
         setHasUnsavedChanges(false);
+
+        // 一覧系の画面を再取得（ホーム / プロフィール）
+        void revalidatePostListsAction({
+          username: from === "profile" ? fromUsername : null,
+        });
       } else {
         alert("保存に失敗しました");
       }
@@ -250,10 +259,17 @@ export default function ArticleEditPage() {
 
     setDeleting(true);
     try {
-      await deletePostService(post.id);
+      await deletePostAction(post.id, {
+        username: from === "profile" ? fromUsername : null,
+      });
       {
         console.log("記事が削除されました");
-        router.push("/");
+        if (from === "profile" && fromUsername) {
+          router.push(`/profile/${fromUsername}`);
+        } else {
+          router.push("/");
+        }
+        router.refresh();
       }
     } catch (error) {
       console.error("削除エラー:", error);

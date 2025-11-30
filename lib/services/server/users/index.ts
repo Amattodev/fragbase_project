@@ -79,7 +79,17 @@ export async function getProfileCounters(userId: string) {
   return { followerCount, publishedCount, totalPostLikes } as const;
 }
 
-async function hydratePosts(base: { id: number; title: string; content: string; contentHtml: string; slug: string; status: string; createdAt: number; updatedAt: number; userId: string | null; }[]): Promise<Post[]> {
+async function hydratePosts(base: {
+  id: number;
+  title: string;
+  content: string;
+  contentHtml: string;
+  slug: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+  userId: string | null;
+}[]): Promise<Post[]> {
   const db = getDatabase();
   const ids = base.map((p) => p.id);
   if (ids.length === 0) return [];
@@ -135,12 +145,22 @@ async function hydratePosts(base: { id: number; title: string; content: string; 
   }));
 }
 
-export async function listAuthoredPosts(userId: string, limit = 12, offset = 0): Promise<Post[]> {
+export async function listAuthoredPosts(
+  userId: string,
+  limit = 12,
+  offset = 0,
+  opts?: { status?: "published" | "draft" | "all" },
+): Promise<Post[]> {
   const db = getDatabase();
+  const status = opts?.status ?? "published";
+  const where =
+    status === "all"
+      ? eq(posts.userId, userId)
+      : and(eq(posts.userId, userId), eq(posts.status, status));
   const rows = await db
     .select()
     .from(posts)
-    .where(and(eq(posts.userId, userId), eq(posts.status, "published")))
+    .where(where)
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .offset(offset);
