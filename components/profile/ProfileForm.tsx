@@ -27,7 +27,7 @@ export function ProfileForm({ initial }: { initial: { name: string; username: st
           }
         });
       }}
-      className="space-y-4 max-w-xl"
+      className="space-y-4 w-full max-w-xl"
     >
       <div>
         <label className="block text-sm mb-1">表示名</label>

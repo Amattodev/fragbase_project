@@ -4,6 +4,7 @@ import { userProfiles, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { ProfileAvatarEditor } from "@/components/profile/ProfileAvatarEditor";
 
 export default async function ProfileSettingsPage() {
   const session = await auth();
@@ -18,9 +19,12 @@ export default async function ProfileSettingsPage() {
     socialLinks = undefined;
   }
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-xl font-semibold mb-4">プロフィールを編集</h1>
-      <ProfileForm initial={{ name: u?.name ?? "", username: u?.username || "", bio: p?.bio ?? null, socialLinks }} />
+    <div className="container mx-auto px-4 py-8 flex flex-col items-center">
+      <h1 className="text-xl font-semibold mb-6 text-center">プロフィールを編集</h1>
+      <div className="flex w-full flex-col items-center gap-6">
+        <ProfileAvatarEditor initialImageUrl={u?.image ?? null} />
+        <ProfileForm initial={{ name: u?.name ?? "", username: u?.username || "", bio: p?.bio ?? null, socialLinks }} />
+      </div>
     </div>
   );
 }

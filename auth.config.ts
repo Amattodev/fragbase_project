@@ -116,19 +116,41 @@ export const authConfig = {
       }
       return token;
     },
-    session({ session, token }) {
+    async session({ session, token }) {
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] session callback (before)", {
           hasSessionUser: !!session.user,
           tokenId: (token as any)?.id,
         });
       }
+
       if (token) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
-        session.user.image = token.picture as string;
       }
+
+      // DB 上の最新情報からアイコンを取得（プロフィール更新後も即時反映させるため）
+      try {
+        const db = getDatabase();
+        const userId = session.user?.id as string | undefined;
+        if (userId) {
+          const row = await db.select().from(users).where(eq(users.id, userId)).get();
+          if (row) {
+            session.user.image = (row.image as string | null) ?? ((token as any)?.picture as string | undefined) ?? null;
+          } else if (token) {
+            session.user.image = ((token as any)?.picture as string | undefined) ?? null;
+          }
+        } else if (token) {
+          session.user.image = ((token as any)?.picture as string | undefined) ?? null;
+        }
+      } catch (e) {
+        console.log("[AuthDebug] session callback DB error", e);
+        if (token) {
+          session.user.image = ((token as any)?.picture as string | undefined) ?? null;
+        }
+      }
+
       if (process.env.NODE_ENV !== "production") {
         console.log("[AuthDebug] session callback (after)", {
           hasSessionUser: !!session.user,
