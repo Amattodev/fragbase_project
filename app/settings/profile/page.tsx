@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ProfileAvatarEditor } from "@/components/profile/ProfileAvatarEditor";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ProfileSettingsPage() {
   const session = await auth();
@@ -20,10 +21,18 @@ export default async function ProfileSettingsPage() {
   }
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col items-center">
-      <h1 className="text-xl font-semibold mb-6 text-center">プロフィールを編集</h1>
-      <div className="flex w-full flex-col items-center gap-6">
-        <ProfileAvatarEditor initialImageUrl={u?.image ?? null} />
-        <ProfileForm initial={{ name: u?.name ?? "", username: u?.username || "", bio: p?.bio ?? null, socialLinks }} />
+      <div className="w-full max-w-xl">
+        <Card style={{ backgroundColor: "var(--article-card)" }}>
+          <CardHeader>
+            <CardTitle className="text-xl">プロフィールを編集</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-6">
+              <ProfileAvatarEditor initialImageUrl={u?.image ?? null} />
+              <ProfileForm initial={{ name: u?.name ?? "", username: u?.username || "", bio: p?.bio ?? null, socialLinks }} />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
+import { Camera } from "lucide-react";
 import Cropper, { type Area } from "react-easy-crop";
 
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ export function ProfileAvatarEditor({ initialImageUrl }: ProfileAvatarEditorProp
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
   const { update: updateSession } = useSession();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setAvatarUrl(initialImageUrl);
@@ -137,16 +139,33 @@ export function ProfileAvatarEditor({ initialImageUrl }: ProfileAvatarEditorProp
   const isBusy = uploading || pending;
 
   return (
-    <section className="flex w-full flex-col items-center gap-3">
-      <div className="h-24 w-24 overflow-hidden rounded-full border border-border bg-muted">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="プロフィールアイコンのプレビュー" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">
-            No Image
-          </div>
-        )}
+    <section className="flex w-full flex-col items-start gap-3">
+      <div className="relative h-24 w-24">
+        <div className="h-24 w-24 overflow-hidden rounded-full border border-border bg-muted">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="プロフィールアイコンのプレビュー" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[11px] text-muted-foreground">
+              No Image
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          aria-label="プロフィール画像を変更"
+          onClick={() => fileInputRef.current?.click()}
+          className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/70 text-primary shadow-md transition hover:border-primary hover:text-primary-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Camera className="h-4 w-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
       {sourceUrl && (
         <div className="relative mt-2 h-64 w-64 overflow-hidden rounded-xl border bg-black/60">
@@ -177,23 +196,21 @@ export function ProfileAvatarEditor({ initialImageUrl }: ProfileAvatarEditorProp
           />
         </div>
       )}
-      <div className="flex flex-col items-center gap-2">
-        <label className="cursor-pointer text-xs text-primary underline">
-          画像を選択
-          <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-        </label>
-        <Button
-          type="button"
-          size="sm"
-          disabled={!localFile || !sourceUrl || !croppedAreaPixels || isBusy}
-          onClick={handleSave}
-        >
-          {isBusy ? "更新中..." : "アイコンを保存"}
-        </Button>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {sourceUrl && (
+        <div className="mt-1 flex flex-col items-start gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={!localFile || !sourceUrl || !croppedAreaPixels || isBusy}
+            onClick={handleSave}
+          >
+            {isBusy ? "更新中..." : "アイコンを保存"}
+          </Button>
+        </div>
+      )}
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       <p className="text-[11px] text-muted-foreground">
-        画像を選択して、下のプレビューをドラッグして丸型のトリミング位置を調整できます（推奨: 正方形 / 5MB 以内）。
+        アイコン右下のカメラアイコンをクリックして画像を選択し、下のプレビューをドラッグして丸型のトリミング位置を調整できます（推奨: 正方形 / 5MB 以内）。
       </p>
     </section>
   );
