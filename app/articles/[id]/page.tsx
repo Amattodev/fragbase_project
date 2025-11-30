@@ -6,10 +6,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import TopNavTabs from "@/app/_components/TopNavTabs";
+import { deletePostAction } from "@/app/(actions)/posts";
 import { SocialIcons } from "@/components/profile/SocialIcons";
 import { Button } from "@/components/ui/button";
 import type { Post } from "@/lib/services/posts";
-import { deletePost, getPost, getPostLikesCount, togglePostLike } from "@/lib/services/posts";
+import { getPost, getPostLikesCount, togglePostLike } from "@/lib/services/posts";
 
 import CommentSection from "../_components/CommentsSection";
 
@@ -171,13 +172,16 @@ export default function ArticlePage() {
     if (!ok) return;
     setDeleting(true);
     try {
-      await deletePost(post.id);
+      await deletePostAction(post.id, {
+        username: from === "profile" ? fromUsername : null,
+      });
       setMenuOpen(false);
       if (from === "profile" && fromUsername && authorProfile?.isMe) {
         router.push(`/profile/${fromUsername}`);
       } else {
         router.push("/");
       }
+      router.refresh();
     } catch (err) {
       console.error("記事削除エラー:", err);
       alert("記事の削除に失敗しました。しばらくしてから再度お試しください。");
