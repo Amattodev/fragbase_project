@@ -1,19 +1,29 @@
 "use client";
 
 import { ChevronDown, Gamepad2, LogOut, Pencil, User } from "lucide-react";
-import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { getProviders, signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
+import { LoginModalShell } from "@/components/auth/LoginModalShell";
 import { Button } from "@/components/ui/button";
 import { isPostingEnabled } from "@/lib/featureFlags";
 import { debugFetchSession } from "@/lib/services/auth";
 import { createPost } from "@/lib/services/posts";
+import DiscordIcon from "@/types/icons/DiscordIcon";
+import GoogleIcon from "@/types/icons/GoogleIcon";
+import SteamIcon from "@/types/icons/SteamIcon";
+import TwitchIcon from "@/types/icons/TwitchIcon";
+
+type ProviderLite = { id: string; name: string };
 
 export default function Header() {
   const { data: session, status } = useSession();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [providers, setProviders] = useState<Record<string, ProviderLite> | null>(null);
+  const [providersLoading, setProvidersLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Debug: useSession 状態を常に観測
@@ -38,13 +48,38 @@ export default function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Escape でモーダルを閉じる
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowLoginModal(false);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  async function openLoginModal() {
+    setShowLoginModal(true);
+    if (!providers && !providersLoading) {
+      setProvidersLoading(true);
+      try {
+        const res = await getProviders();
+        setProviders(res);
+      } finally {
+        setProvidersLoading(false);
+      }
+    }
+  }
+
   const handleLogoClick = () => {
     // 完全にページをリロードして確実にリセット
     window.location.href = "/";
   };
   const handleCreateArticleClick = async () => {
     if (!session) {
-      signIn();
+      openLoginModal();
       return;
     }
 
@@ -79,17 +114,12 @@ export default function Header() {
           <>
             {/* 投稿ボタン（ログインユーザーのみ表示） */}
             {isPostingEnabled() ? (
-              <Button
-                className="rounded-full px-6"
-                onClick={handleCreateArticleClick}
-              >
+              <Button className="rounded-full px-6" onClick={handleCreateArticleClick}>
                 ＋ 記事を書く
               </Button>
             ) : (
               <Link href="/post">
-                <Button className="rounded-full px-6">
-                  ＋ 投稿
-                </Button>
+                <Button className="rounded-full px-6">＋ 投稿</Button>
               </Link>
             )}
 
@@ -159,14 +189,116 @@ export default function Header() {
           </>
         ) : (
           // 未ログイン状態
-          <Button
-            onClick={() => signIn()}
-            className="rounded-full px-6"
-          >
+          <Button onClick={openLoginModal} className="rounded-full px-6">
             ログイン
           </Button>
         )}
       </nav>
+
+      {showLoginModal && (
+        <LoginModalShell open onClose={() => setShowLoginModal(false)}>
+          <LoginModal
+            providers={providers}
+            loading={providersLoading}
+            onSelect={(providerId) => signIn(providerId, { callbackUrl: "/" })}
+          />
+        </LoginModalShell>
+      )}
+    </div>
+  );
+}
+
+function LoginModal({
+  providers,
+  loading,
+  onSelect,
+}: {
+  providers: Record<string, ProviderLite> | null;
+  loading: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const providerIcon = (id: string) => {
+    switch (id) {
+      case "google":
+        return <GoogleIcon className="h-6 w-6" />;
+      case "discord":
+        return <DiscordIcon className="h-6 w-6" />;
+      case "twitch":
+        return <TwitchIcon className="h-6 w-6" />;
+      case "steam":
+        return <SteamIcon className="h-6 w-6 text-[#171A21]" />;
+      default:
+        return (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-base font-semibold text-foreground">
+            ?
+          </span>
+        );
+    }
+  };
+
+  const providerLabel = (id: string, name: string) => {
+    switch (id) {
+      case "google":
+        return "Google でログイン";
+      case "discord":
+        return "Discord でログイン";
+      case "twitch":
+        return "Twitch でログイン";
+      case "steam":
+        return "Steam でログイン";
+      default:
+        return `${name} でログイン`;
+    }
+  };
+
+  return (
+    <div className="space-y-4 px-8 pb-6 pt-6">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <Image
+          src="/fragbase_logo.png"
+          alt="FragBase"
+          width={240}
+          height={78}
+          className="h-16 w-auto"
+        />
+        <p className="text-sm text-muted-foreground">
+          FRAGBASEヘようこそ！あなたのゲーム体験を共有しましょう。
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center space-y-3">
+        {loading ? (
+          <p className="text-sm text-muted-foreground">プロバイダーを読み込み中...</p>
+        ) : providers && Object.keys(providers).length > 0 ? (
+          Object.values(providers).map((provider) => (
+            <Button
+              key={provider.id}
+              onClick={() => onSelect(provider.id)}
+              className="group flex w-full max-w-[280px] items-center justify-center gap-3 rounded-2xl border border-border/80 bg-card/90 px-3 py-3 text-base font-medium text-foreground shadow-[0_0_12px_rgba(0,0,0,0.25)] transition duration-150 hover:-translate-y-[1px] hover:border-accent hover:bg-accent/10 hover:shadow-[0_0_18px_rgba(0,245,255,0.35)]"
+              variant="outline"
+            >
+              <span className="text-xl transition-transform group-hover:scale-110">
+                {providerIcon(provider.id)}
+              </span>
+              <span className="text-center">{providerLabel(provider.id, provider.name)}</span>
+            </Button>
+          ))
+        ) : (
+          <div className="space-y-2 rounded-lg border border-dashed border-border bg-background/60 p-4 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">OAuth 設定が未完了です</p>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li>Google Cloud Console 等で OAuth クライアントを作成</li>
+              <li>
+                リダイレクト URI:{" "}
+                <code className="rounded bg-muted px-1 text-xs">
+                  http://localhost:3000/api/auth/callback/google
+                </code>
+              </li>
+              <li>.env に Client ID / Secret を設定</li>
+            </ol>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
