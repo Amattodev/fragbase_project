@@ -3,7 +3,7 @@
 import { ChevronDown, Gamepad2, LogOut, Pencil, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { getProviders, signIn, signOut, useSession, type ClientSafeProvider } from "next-auth/react";
+import { getProviders, signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { LoginModalShell } from "@/components/auth/LoginModalShell";
@@ -17,10 +17,11 @@ import SteamIcon from "@/types/icons/SteamIcon";
 import TwitchIcon from "@/types/icons/TwitchIcon";
 
 export default function Header() {
-  const { data: session, status } = useSession();
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [providers, setProviders] = useState<Record<string, ClientSafeProvider> | null>(null);
+const { data: session, status } = useSession();
+const [showDropdown, setShowDropdown] = useState(false);
+const [showLoginModal, setShowLoginModal] = useState(false);
+type ProviderLite = { id: string; name: string };
+const [providers, setProviders] = useState<Record<string, ProviderLite> | null>(null);
   const [providersLoading, setProvidersLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -211,7 +212,7 @@ function LoginModal({
   loading,
   onSelect,
 }: {
-  providers: Record<string, ClientSafeProvider> | null;
+  providers: Record<string, ProviderLite> | null;
   loading: boolean;
   onSelect: (id: string) => void;
 }) {
