@@ -16,12 +16,13 @@ import GoogleIcon from "@/types/icons/GoogleIcon";
 import SteamIcon from "@/types/icons/SteamIcon";
 import TwitchIcon from "@/types/icons/TwitchIcon";
 
-export default function Header() {
-const { data: session, status } = useSession();
-const [showDropdown, setShowDropdown] = useState(false);
-const [showLoginModal, setShowLoginModal] = useState(false);
 type ProviderLite = { id: string; name: string };
-const [providers, setProviders] = useState<Record<string, ProviderLite> | null>(null);
+
+export default function Header() {
+  const { data: session, status } = useSession();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [providers, setProviders] = useState<Record<string, ProviderLite> | null>(null);
   const [providersLoading, setProvidersLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
