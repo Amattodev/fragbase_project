@@ -9,8 +9,8 @@ export function DefaultGameProfileForm({ mode, initial, onSave, onDelete }: Prop
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [chars, setChars] = useState<string[]>(() => {
-    const base = (initial?.mainCharacters || []).slice(0, 3);
-    return [0, 1, 2].map((i) => base[i] ?? "");
+    const base = initial?.mainCharacters && initial.mainCharacters.length > 0 ? initial.mainCharacters : ["", "", ""];
+    return base;
   });
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -18,7 +18,10 @@ export function DefaultGameProfileForm({ mode, initial, onSave, onDelete }: Prop
     setError(null);
     const fd = new FormData(e.currentTarget);
     fd.delete("mainCharacters[]");
-    chars.forEach((c) => fd.append("mainCharacters[]", c.trim()));
+    chars
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0)
+      .forEach((c) => fd.append("mainCharacters[]", c));
     start(async () => {
       try {
         const res = await onSave(fd);
@@ -73,6 +76,17 @@ export function DefaultGameProfileForm({ mode, initial, onSave, onDelete }: Prop
     [],
   );
 
+  function addRow() {
+    setChars((prev) => [...prev, ""]);
+  }
+
+  function removeRow(idx: number) {
+    setChars((prev) => {
+      if (prev.length === 1) return prev; // keep at least one row visible
+      return prev.filter((_, i) => i !== idx);
+    });
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -85,7 +99,7 @@ export function DefaultGameProfileForm({ mode, initial, onSave, onDelete }: Prop
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium">メインキャラクター（最大3体、ドラッグで並び替え）</label>
+        <label className="mb-2 block text-sm font-medium">メインキャラクター（制限なし、ドラッグで並び替え）</label>
         <ul className="space-y-2">
           {chars.map((val, i) => (
             <li
@@ -108,10 +122,25 @@ export function DefaultGameProfileForm({ mode, initial, onSave, onDelete }: Prop
                 }}
                 placeholder="キャラクター名"
               />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => removeRow(i)}
+                disabled={chars.length === 1}
+              >
+                削除
+              </Button>
             </li>
           ))}
         </ul>
-        <p className="mt-1 text-xs text-muted-foreground">未入力は保存時に無視されます。上から使用頻度が高い順です。</p>
+        <div className="mt-3 flex items-center gap-3">
+          <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            行を追加
+          </Button>
+          <p className="text-xs text-muted-foreground">未入力は保存時に無視されます。上から使用頻度が高い順です。</p>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -149,4 +178,3 @@ export function Field({
     </div>
   );
 }
-

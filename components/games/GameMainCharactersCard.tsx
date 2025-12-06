@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { buildCharacterAvatarPath, buildRoleIconPath, CharacterMetaMap, slugify } from "@/constants/gameAssets";
 
 export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string; mainCharacters?: string[] | null }) {
-  const list = (mainCharacters || []).filter((x) => x && x.trim().length > 0).slice(0, 3);
+  const list = (mainCharacters || []).filter((x) => x && x.trim().length > 0);
   const hasAny = list.length > 0;
 
   const [meta, setMeta] = useState<CharacterMetaMap | null>(null);
@@ -44,33 +44,42 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
       </CardHeader>
       <CardContent>
         {hasAny ? (
-          <ol className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {items.map((it, idx) => (
-              <li key={idx} className="grid grid-cols-[24px_36px_20px_auto_1fr] items-center gap-3 min-h-10">
-                <span aria-label={`順位 ${idx + 1}`} className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
-                  {idx + 1}
-                </span>
-                <SmartImage
-                  src={it.avatar}
-                  alt={`${it.name} avatar`}
-                  className="h-9 w-9"
-                  imgClassName="h-9 w-9 rounded object-cover"
-                  fallback={<span className="inline-flex h-9 w-9 items-center justify-center rounded bg-muted text-xs text-muted-foreground">{initial(it.name)}</span>}
-                />
-                <SmartImage
-                  src={it.roleIcon}
-                  alt={`${it.roleName ?? "role"} icon`}
-                  className="h-5 w-5"
-                  imgClassName="h-5 w-5 object-contain"
-                  fallback={<span className="inline-block h-5 w-5 rounded bg-muted" />}
-                />
-                <span className="text-muted-foreground">
-                  {it.roleName ? <TruncateWithTooltip className="max-w-[140px]">{it.roleName}</TruncateWithTooltip> : <span className="text-muted-foreground">—</span>}
-                </span>
-                <TruncateWithTooltip className="max-w-[420px] font-medium">{it.name}</TruncateWithTooltip>
-              </li>
+              <div key={idx} className="rounded-md border bg-card p-3 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <SmartImage
+                    src={it.avatar}
+                    alt={`${it.name} avatar`}
+                    className="h-16 w-16"
+                    imgClassName="h-16 w-16 rounded object-cover"
+                    fallback={
+                      <span className="inline-flex h-16 w-16 items-center justify-center rounded bg-muted text-sm text-muted-foreground">
+                        {initial(it.name)}
+                      </span>
+                    }
+                  />
+                  <div className="flex items-center gap-2">
+                    {it.roleIcon ? (
+                      <SmartImage
+                        src={it.roleIcon}
+                        alt={`${it.roleName ?? "role"} icon`}
+                        className="h-5 w-5"
+                        imgClassName="h-5 w-5 object-contain"
+                        fallback={<span className="inline-block h-5 w-5 rounded bg-muted" />}
+                      />
+                    ) : (
+                      <span className="inline-block h-5 w-5 rounded bg-muted" />
+                    )}
+                    <span className="text-muted-foreground">
+                      {it.roleName ? <TruncateWithTooltip className="max-w-[120px]">{it.roleName}</TruncateWithTooltip> : "—"}
+                    </span>
+                  </div>
+                  <TruncateWithTooltip className="max-w-full text-center font-medium">{it.name}</TruncateWithTooltip>
+                </div>
+              </div>
             ))}
-          </ol>
+          </div>
         ) : (
           <div className="text-sm text-muted-foreground">未設定</div>
         )}

@@ -27,6 +27,7 @@ export async function createUserGameProfileAction(slug: string, formData: FormDa
   revalidatePath(`/profile/${username}`);
   revalidatePath(`/profile/${username}/games/${slug}`);
   revalidatePath(`/settings/games`);
+  revalidatePath(`/settings/games/${slug}/edit`);
   return { redirect: `/profile/${username}/games/${slug}` } as const;
 }
 
@@ -36,6 +37,8 @@ export async function updateUserGameProfileAction(slug: string, formData: FormDa
   const username = await getUsername(userId);
   revalidatePath(`/profile/${username}`);
   revalidatePath(`/profile/${username}/games/${slug}`);
+  revalidatePath(`/settings/games`);
+  revalidatePath(`/settings/games/${slug}/edit`);
   return { redirect: `/profile/${username}/games/${slug}` } as const;
 }
 

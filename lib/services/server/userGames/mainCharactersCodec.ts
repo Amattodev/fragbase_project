@@ -5,7 +5,7 @@ export function mapRowWithParsedMainCharacters<T extends { mainCharacters?: stri
   if (row.mainCharacters) {
     try {
       const arr = JSON.parse(row.mainCharacters);
-      if (Array.isArray(arr)) parsed = arr.filter((x) => typeof x === 'string').slice(0, 3);
+      if (Array.isArray(arr)) parsed = arr.filter((x) => typeof x === 'string');
     } catch {}
   }
   return { ...(row as any), mainCharacters: parsed };
@@ -13,7 +13,6 @@ export function mapRowWithParsedMainCharacters<T extends { mainCharacters?: stri
 
 export function stringifyMainCharacters(arr?: string[] | null): string | null {
   if (!arr || arr.length === 0) return null;
-  const clean = arr.filter((x) => typeof x === 'string' && x.trim().length > 0).slice(0, 3);
+  const clean = arr.filter((x) => typeof x === 'string' && x.trim().length > 0);
   return clean.length ? JSON.stringify(clean) : null;
 }
-
