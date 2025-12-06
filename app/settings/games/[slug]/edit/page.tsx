@@ -37,6 +37,7 @@ export default async function EditGameProfilePage({ params }: { params: { slug: 
           accountId: profile.accountId ?? undefined,
           accountUsername: profile.accountUsername ?? undefined,
           mainCharacters: profile.mainCharacters ?? [],
+          notes: profile.notes ?? undefined,
         }}
         onSave={onSave}
         onDelete={onDelete}

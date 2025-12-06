@@ -9,6 +9,7 @@ import { GameRankCard } from "@/components/games/GameRankCard";
 import { GameAccountCard } from "@/components/games/GameAccountCard";
 import { GameMainCharactersCard } from "@/components/games/GameMainCharactersCard";
 import { GamePlayersStrip } from "@/components/games/GamePlayersStrip";
+import { GameNotesCard } from "@/components/games/GameNotesCard";
 
 export default async function UserGameProfileViewPage({ params }: { params: { username: string; slug: string } }) {
   const user = await getUserByUsername(params.username.toLowerCase());
@@ -35,13 +36,14 @@ export default async function UserGameProfileViewPage({ params }: { params: { us
         <div className="lg:col-span-5 space-y-4">
           <GameRankCard currentRank={profile.currentRank} highestRank={profile.highestRank} />
           <GameAccountCard accountUsername={profile.accountUsername} accountId={profile.accountId} />
+          <GameNotesCard notes={profile.notes} />
         </div>
         <div className="lg:col-span-7 space-y-4">
           <GameMainCharactersCard slug={game.slug} mainCharacters={profile.mainCharacters ?? undefined} />
-          <GamePlayersStrip slug={game.slug} players={players} />
         </div>
       </div>
-      {(!profile.currentRank && !profile.highestRank && !profile.accountId && !profile.accountUsername && !(profile.mainCharacters && profile.mainCharacters.length)) && (
+      <GamePlayersStrip slug={game.slug} players={players} />
+      {(!profile.currentRank && !profile.highestRank && !profile.accountId && !profile.accountUsername && !(profile.mainCharacters && profile.mainCharacters.length) && !(profile.notes && profile.notes.trim().length)) && (
         <p className="text-sm text-muted-foreground">まだ情報が登録されていません。編集から追加しましょう。</p>
       )}
     </div>

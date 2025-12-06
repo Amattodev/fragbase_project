@@ -27,6 +27,7 @@ export async function createUserGameProfileAction(slug: string, formData: FormDa
   revalidatePath(`/profile/${username}`);
   revalidatePath(`/profile/${username}/games/${slug}`);
   revalidatePath(`/settings/games`);
+  revalidatePath(`/settings/games/${slug}/edit`);
   return { redirect: `/profile/${username}/games/${slug}` } as const;
 }
 
@@ -36,6 +37,8 @@ export async function updateUserGameProfileAction(slug: string, formData: FormDa
   const username = await getUsername(userId);
   revalidatePath(`/profile/${username}`);
   revalidatePath(`/profile/${username}/games/${slug}`);
+  revalidatePath(`/settings/games`);
+  revalidatePath(`/settings/games/${slug}/edit`);
   return { redirect: `/profile/${username}/games/${slug}` } as const;
 }
 
@@ -52,7 +55,7 @@ function extractPatch(formData: FormData) {
   const get = (k: string) => (formData.get(k)?.toString().trim() || "").slice(0, 200);
   const v = (s: string) => (s ? s : null);
   const getAll = (k: string) => formData.getAll(k).map((x) => x.toString()).map((s) => s.trim()).filter(Boolean);
-  const mainCharacters = getAll('mainCharacters[]').slice(0, 3);
+  const mainCharacters = getAll("mainCharacters[]");
   return {
     // legacy passthroughs (not used on new form, kept for compatibility)
     rank: v(get("rank")),
