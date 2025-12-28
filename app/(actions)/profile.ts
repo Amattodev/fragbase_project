@@ -17,6 +17,7 @@ export async function updateProfileAction(formData: FormData) {
   const x = (formData.get("x") || "").toString();
   const youtube = (formData.get("youtube") || "").toString();
   const twitch = (formData.get("twitch") || "").toString();
+  const tiktok = (formData.get("tiktok") || "").toString();
   const steam = (formData.get("steam") || "").toString();
   const discord = (formData.get("discord") || "").toString();
 
@@ -24,6 +25,7 @@ export async function updateProfileAction(formData: FormData) {
   if (x) social.x = x;
   if (youtube) social.youtube = youtube;
   if (twitch) social.twitch = twitch;
+  if (tiktok) social.tiktok = tiktok;
   if (steam) social.steam = steam;
   if (discord) social.discord = discord;
 

@@ -48,6 +48,7 @@ export function ProfileForm({ initial }: { initial: { name: string; username: st
         <div><label className="block text-sm mb-1">X</label><Input name="x" defaultValue={initial.socialLinks?.x ?? ""} placeholder="https://x.com/..." /></div>
         <div><label className="block text-sm mb-1">YouTube</label><Input name="youtube" defaultValue={initial.socialLinks?.youtube ?? ""} placeholder="https://youtube.com/..." /></div>
         <div><label className="block text-sm mb-1">Twitch</label><Input name="twitch" defaultValue={initial.socialLinks?.twitch ?? ""} placeholder="https://twitch.tv/..." /></div>
+        <div><label className="block text-sm mb-1">TikTok</label><Input name="tiktok" defaultValue={initial.socialLinks?.tiktok ?? ""} placeholder="https://tiktok.com/@..." /></div>
         <div><label className="block text-sm mb-1">Steam</label><Input name="steam" defaultValue={initial.socialLinks?.steam ?? ""} placeholder="https://steamcommunity.com/..." /></div>
         <div><label className="block text-sm mb-1">Discord</label><Input name="discord" defaultValue={initial.socialLinks?.discord ?? ""} placeholder="https://discord.gg/..." /></div>
       </fieldset>
