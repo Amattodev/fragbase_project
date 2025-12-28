@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EDITOR_HEIGHT_PX, MAX_VIDEO_FILE_SIZE } from "@/constants";
+import { markdownComponents } from "@/lib/markdown/components";
 import { uploadImageAndGetUrl, uploadVideoAndGetUrl } from "@/lib/services/uploads";
 
 // 動的インポートでMDEditorを読み込み（SSR回避）
@@ -453,6 +454,9 @@ export default function EditorComponent({
           backgroundColor: "var(--card)",
         }}
         height={EDITOR_HEIGHT_PX}
+        previewOptions={{
+          components: markdownComponents,
+        }}
       />
     </div>
   );

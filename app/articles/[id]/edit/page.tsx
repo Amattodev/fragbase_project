@@ -46,6 +46,11 @@ export default function ArticleEditPage() {
   const [gameSlugs, setGameSlugs] = useState<string[]>([]);
   const [availableGames, setAvailableGames] = useState<{ id: number; name: string; displayName: string }[]>([]);
   const [status, setStatus] = useState<"draft" | "published">("draft");
+  // 公開モーダル用のstate
+  const [showPublishSuccessModal, setShowPublishSuccessModal] = useState(false);
+  const [showPublishErrorModal, setShowPublishErrorModal] = useState(false);
+  const [publishError, setPublishError] = useState<string>("");
+  const [publishing, setPublishing] = useState(false);
 
   const articleId = params.id as string;
   const from = searchParams.get("from");
@@ -144,6 +149,66 @@ export default function ArticleEditPage() {
         JSON.stringify(tags) !== JSON.stringify(originalContent.tags) ||
         JSON.stringify(gameSlugs) !== JSON.stringify(originalContent.gameCategories),
     );
+  };
+
+  // 公開トグルのハンドラー
+  const handlePublishToggle = async () => {
+    if (status === "published") {
+      // 公開中 → 下書きに戻す（特に何もしない）
+      handleStatusChange("draft");
+      return;
+    }
+
+    // 下書き → 公開に変更
+    if (!post || publishing) return;
+
+    setPublishing(true);
+    try {
+      const data = await updatePostService(post.id, {
+        title,
+        content,
+        status: "published",
+        tags,
+        gameSlugs,
+      });
+
+      if (data) {
+        setPost(data);
+        setStatus("published");
+        setOriginalContent({ title, content, status: "published", tags, gameCategories: gameSlugs });
+        setHasUnsavedChanges(false);
+
+        // 一覧系の画面を再取得
+        void revalidatePostListsAction({
+          username: from === "profile" ? fromUsername : null,
+        });
+
+        // 成功モーダルを表示
+        setShowPublishSuccessModal(true);
+      } else {
+        setPublishError("記事の保存に失敗しました。もう一度お試しください。");
+        setShowPublishErrorModal(true);
+      }
+    } catch (error) {
+      console.error("公開エラー:", error);
+      const errorMessage = error instanceof Error ? error.message : "不明なエラーが発生しました";
+      setPublishError(`記事の公開に失敗しました。\n\n${errorMessage}`);
+      setShowPublishErrorModal(true);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  // 公開成功モーダルの「完了」ボタンハンドラー
+  const handlePublishSuccessComplete = () => {
+    setShowPublishSuccessModal(false);
+    router.push(`/articles/${articleId}`);
+  };
+
+  // エラーモーダルを閉じる
+  const handlePublishErrorClose = () => {
+    setShowPublishErrorModal(false);
+    setPublishError("");
   };
 
   const handleTagAdd = (tagName: string) => {
@@ -352,15 +417,16 @@ export default function ArticleEditPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-muted-foreground">
-                {status === "published" ? "公開中" : "下書き"}
+                {publishing ? "公開中..." : status === "published" ? "公開" : "下書き"}
               </label>
               <button
-                onClick={() => handleStatusChange(status === "draft" ? "published" : "draft")}
+                onClick={handlePublishToggle}
+                disabled={publishing}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   status === "published"
                     ? "border border-primary/70 bg-primary shadow-[0_0_18px_rgba(0,245,255,0.75)]"
                     : "border border-border bg-background/70"
-                }`}
+                } ${publishing ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-foreground shadow-[0_0_8px_rgba(0,0,0,0.8)] transition-transform ${
@@ -680,6 +746,74 @@ export default function ArticleEditPage() {
                 disabled={deleting}
               >
                 {deleting ? "削除中..." : "削除する"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 公開成功モーダル */}
+      {showPublishSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-primary/60 bg-card p-6 shadow-[0_0_24px_rgba(0,245,255,0.35)]">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+                <svg
+                  className="h-6 w-6 text-primary"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-primary">記事を公開しました</h3>
+            </div>
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+              記事が正常に公開されました。
+              <br />
+              完了ボタンを押すと、公開された記事ページへ移動します。
+            </p>
+            <div className="flex justify-end">
+              <Button
+                onClick={handlePublishSuccessComplete}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_18px_rgba(0,245,255,0.35)]"
+              >
+                完了
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 公開エラーモーダル */}
+      {showPublishErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-destructive/60 bg-card p-6 shadow-[0_0_24px_rgba(0,0,0,0.85)]">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20">
+                <svg
+                  className="h-6 w-6 text-destructive"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-destructive">公開に失敗しました</h3>
+            </div>
+            <p className="mb-6 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+              {publishError}
+            </p>
+            <div className="flex justify-end">
+              <Button
+                onClick={handlePublishErrorClose}
+                variant="outline"
+              >
+                閉じる
               </Button>
             </div>
           </div>
