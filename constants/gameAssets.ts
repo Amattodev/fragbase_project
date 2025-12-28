@@ -108,7 +108,7 @@ export const OVERWATCH_CHARACTERS: GameCharacterDef[] = [
   // support
   { value: "イラリー", label: "イラリー", imagePath: "/images/games/overwatch-2/characters/illari.png" },
   { value: "ルシオ", label: "ルシオ", imagePath: "/images/games/overwatch-2/characters/lucio.png" },
-  { value: "ライフウィーバー", label: "ライフウィーバー", imagePath: "/images/games/overwatch-2/characters/lifeweaver.png" },
+  { value: "ライフウィーバー", label: "ライフウィーバー", imagePath: "/images/games/overwatch-2/characters/weaver.png" },
   { value: "モイラ", label: "モイラ", imagePath: "/images/games/overwatch-2/characters/moira.png" },
   { value: "マーシー", label: "マーシー", imagePath: "/images/games/overwatch-2/characters/mercy.png" },
   { value: "ブルギッテ", label: "ブルギッテ", imagePath: "/images/games/overwatch-2/characters/brigitte.png" },
@@ -181,7 +181,7 @@ export const VALORANT_AGENTS: GameCharacterDef[] = [
   { value: "スカイ", label: "スカイ", imagePath: "/images/games/valorant/characters/skye.png" },
   { value: "KAY/O", label: "KAY/O", imagePath: "/images/games/valorant/characters/kayo.png" },
   { value: "フェイド", label: "フェイド", imagePath: "/images/games/valorant/characters/fade.png" },
-  { value: "ゲッコー", label: "ゲッコー", imagePath: "/images/games/valorant/characters/gecko.png" },
+  { value: "ゲッコー", label: "ゲッコー", imagePath: "/images/games/valorant/characters/gekko.png" },
   { value: "オーメン", label: "オーメン", imagePath: "/images/games/valorant/characters/omen.png" },
   { value: "ブリムストーン", label: "ブリムストーン", imagePath: "/images/games/valorant/characters/brimstone.png" },
   { value: "ヴァイパー", label: "ヴァイパー", imagePath: "/images/games/valorant/characters/viper.png" },

@@ -1,0 +1,218 @@
+{
+  "イラリー": {
+    "avatar": "/images/games/overwatch-2/characters/illari.png"
+  },
+  "ルシオ": {
+    "avatar": "/images/games/overwatch-2/characters/lucio.png"
+  },
+  "ライフウィーバー": {
+    "avatar": "/images/games/overwatch-2/characters/weaver.png"
+  },
+  "マーシー": {
+    "avatar": "/images/games/overwatch-2/characters/mercy.png"
+  },
+  "ブルギッテ": {
+    "avatar": "/images/games/overwatch-2/characters/brigitte.png"
+  },
+  "バティスト": {
+    "avatar": "/images/games/overwatch-2/characters/baptiste.png"
+  },
+  "ゼニヤッタ": {
+    "avatar": "/images/games/overwatch-2/characters/zenyatta.png"
+  },
+  "キリコ": {
+    "avatar": "/images/games/overwatch-2/characters/kiriko.png"
+  },
+  "アナ": {
+    "avatar": "/images/games/overwatch-2/characters/ana.png"
+  },
+  "ロードホッグ": {
+    "avatar": "/images/games/overwatch-2/characters/roadhog.png"
+  },
+  "レッキング・ボール": {
+    "avatar": "/images/games/overwatch-2/characters/wrecking-ball.png"
+  },
+  "ラマットラ": {
+    "avatar": "/images/games/overwatch-2/characters/ramattra.png"
+  },
+  "ラインハルト": {
+    "avatar": "/images/games/overwatch-2/characters/reinhardt.png"
+  },
+  "ドゥームフィスト": {
+    "avatar": "/images/games/overwatch-2/characters/doomfist.png"
+  },
+  "ジャンカー・クイーン": {
+    "avatar": "/images/games/overwatch-2/characters/junker-queen.png"
+  },
+  "シグマ": {
+    "avatar": "/images/games/overwatch-2/characters/sigma.png"
+  },
+  "オリーサ": {
+    "avatar": "/images/games/overwatch-2/characters/orisa.png"
+  },
+  "ウィンストン": {
+    "avatar": "/images/games/overwatch-2/characters/winston.png"
+  },
+  "D.VA": {
+    "avatar": "/images/games/overwatch-2/characters/dva.png"
+  },
+  "リーパー": {
+    "avatar": "/images/games/overwatch-2/characters/reaper.png"
+  },
+  "メイ": {
+    "avatar": "/images/games/overwatch-2/characters/mei.png"
+  },
+  "ファラ": {
+    "avatar": "/images/games/overwatch-2/characters/pharah.png"
+  },
+  "バスティオン": {
+    "avatar": "/images/games/overwatch-2/characters/bastion.png"
+  },
+  "ハンゾー": {
+    "avatar": "/images/games/overwatch-2/characters/hanzo.png"
+  },
+  "トレーサー": {
+    "avatar": "/images/games/overwatch-2/characters/tracer.png"
+  },
+  "トールビョーン": {
+    "avatar": "/images/games/overwatch-2/characters/torbjorn.png"
+  },
+  "ソンブラ": {
+    "avatar": "/images/games/overwatch-2/characters/sombra.png"
+  },
+  "ソルジャー76": {
+    "avatar": "/images/games/overwatch-2/characters/soldier-76.png"
+  },
+  "ジャンクラット": {
+    "avatar": "/images/games/overwatch-2/characters/junkrat.png"
+  },
+  "シンメトラ": {
+    "avatar": "/images/games/overwatch-2/characters/symmetra.png"
+  },
+  "ゲンジ": {
+    "avatar": "/images/games/overwatch-2/characters/genji.png"
+  },
+  "キャスディ": {
+    "avatar": "/images/games/overwatch-2/characters/cassidy.png"
+  },
+  "エコー": {
+    "avatar": "/images/games/overwatch-2/characters/echo.png"
+  },
+  "ウィドウメイカー": {
+    "avatar": "/images/games/overwatch-2/characters/widowmaker.png"
+  },
+  "アッシュ": {
+    "avatar": "/images/games/overwatch-2/characters/ashe.png"
+  },
+  "ana": {
+    "avatar": "/images/games/overwatch-2/characters/ana.png"
+  },
+  "ashe": {
+    "avatar": "/images/games/overwatch-2/characters/ashe.png"
+  },
+  "baptiste": {
+    "avatar": "/images/games/overwatch-2/characters/baptiste.png"
+  },
+  "bastion": {
+    "avatar": "/images/games/overwatch-2/characters/bastion.png"
+  },
+  "brigitte": {
+    "avatar": "/images/games/overwatch-2/characters/brigitte.png"
+  },
+  "cassidy": {
+    "avatar": "/images/games/overwatch-2/characters/cassidy.png"
+  },
+  "dva": {
+    "avatar": "/images/games/overwatch-2/characters/dva.png"
+  },
+  "doomfist": {
+    "avatar": "/images/games/overwatch-2/characters/doomfist.png"
+  },
+  "echo": {
+    "avatar": "/images/games/overwatch-2/characters/echo.png"
+  },
+  "genji": {
+    "avatar": "/images/games/overwatch-2/characters/genji.png"
+  },
+  "hanzo": {
+    "avatar": "/images/games/overwatch-2/characters/hanzo.png"
+  },
+  "junkrat": {
+    "avatar": "/images/games/overwatch-2/characters/junkrat.png"
+  },
+  "junker-queen": {
+    "avatar": "/images/games/overwatch-2/characters/junker-queen.png"
+  },
+  "kiriko": {
+    "avatar": "/images/games/overwatch-2/characters/kiriko.png"
+  },
+  "lucio": {
+    "avatar": "/images/games/overwatch-2/characters/lucio.png"
+  },
+  "lifeweaver": {
+    "avatar": "/images/games/overwatch-2/characters/weaver.png"
+  },
+  "mercy": {
+    "avatar": "/images/games/overwatch-2/characters/mercy.png"
+  },
+  "mei": {
+    "avatar": "/images/games/overwatch-2/characters/mei.png"
+  },
+  "moira": {
+    "avatar": "/images/games/overwatch-2/characters/moira.png"
+  },
+  "orisa": {
+    "avatar": "/images/games/overwatch-2/characters/orisa.png"
+  },
+  "pharah": {
+    "avatar": "/images/games/overwatch-2/characters/pharah.png"
+  },
+  "ramattra": {
+    "avatar": "/images/games/overwatch-2/characters/ramattra.png"
+  },
+  "reaper": {
+    "avatar": "/images/games/overwatch-2/characters/reaper.png"
+  },
+  "reinhardt": {
+    "avatar": "/images/games/overwatch-2/characters/reinhardt.png"
+  },
+  "roadhog": {
+    "avatar": "/images/games/overwatch-2/characters/roadhog.png"
+  },
+  "sigma": {
+    "avatar": "/images/games/overwatch-2/characters/sigma.png"
+  },
+  "sojourn": {
+    "avatar": "/images/games/overwatch-2/characters/sojourn.png"
+  },
+  "soldier-76": {
+    "avatar": "/images/games/overwatch-2/characters/soldier-76.png"
+  },
+  "sombra": {
+    "avatar": "/images/games/overwatch-2/characters/sombra.png"
+  },
+  "symmetra": {
+    "avatar": "/images/games/overwatch-2/characters/symmetra.png"
+  },
+  "torbjorn": {
+    "avatar": "/images/games/overwatch-2/characters/torbjorn.png"
+  },
+  "tracer": {
+    "avatar": "/images/games/overwatch-2/characters/tracer.png"
+  },
+  "widowmaker": {
+    "avatar": "/images/games/overwatch-2/characters/widowmaker.png"
+  },
+  "winston": {
+    "avatar": "/images/games/overwatch-2/characters/winston.png"
+  },
+  "wrecking-ball": {
+    "avatar": "/images/games/overwatch-2/characters/wrecking-ball.png"
+  },
+  "zarya": {
+    "avatar": "/images/games/overwatch-2/characters/zarya.png"
+  },
+  "zenyatta": {
+    "avatar": "/images/games/overwatch-2/characters/zenyatta.png"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "バンガロール": {
+    "avatar": "/images/games/apex-legends/characters/bangalore.png"
+  },
+  "ヒューズ": {
+    "avatar": "/images/games/apex-legends/characters/fuse.png"
+  },
+  "アッシュ": {
+    "avatar": "/images/games/apex-legends/characters/ash.png"
+  },
+  "バッドマギー": {
+    "avatar": "/images/games/apex-legends/characters/mad-maggie.png"
+  },
+  "バリスティック": {
+    "avatar": "/images/games/apex-legends/characters/ballistic.png"
+  },
+  "パスファインダー": {
+    "avatar": "/images/games/apex-legends/characters/pathfinder.png"
+  },
+  "レイス": {
+    "avatar": "/images/games/apex-legends/characters/wraith.png"
+  },
+  "オクタン": {
+    "avatar": "/images/games/apex-legends/characters/octane.png"
+  },
+  "レブナント": {
+    "avatar": "/images/games/apex-legends/characters/revenant.png"
+  },
+  "ホライゾン": {
+    "avatar": "/images/games/apex-legends/characters/horizon.png"
+  },
+  "オルター": {
+    "avatar": "/images/games/apex-legends/characters/alter.png"
+  },
+  "ブラッドハウンド": {
+    "avatar": "/images/games/apex-legends/characters/bloodhound.png"
+  },
+  "クリプト": {
+    "avatar": "/images/games/apex-legends/characters/crypto.png"
+  },
+  "ヴァルキリー": {
+    "avatar": "/images/games/apex-legends/characters/valkyrie.png"
+  },
+  "シア": {
+    "avatar": "/images/games/apex-legends/characters/seer.png"
+  },
+  "ヴァンテージ": {
+    "avatar": "/images/games/apex-legends/characters/vantage.png"
+  },
+  "コースティック": {
+    "avatar": "/images/games/apex-legends/characters/caustic.png"
+  },
+  "ワットソン": {
+    "avatar": "/images/games/apex-legends/characters/wattson.png"
+  },
+  "ランパート": {
+    "avatar": "/images/games/apex-legends/characters/rampart.png"
+  },
+  "カタリスト": {
+    "avatar": "/images/games/apex-legends/characters/catalyst.png"
+  },
+  "ジブラルタル": {
+    "avatar": "/images/games/apex-legends/characters/gibraltar.png"
+  },
+  "ライフライン": {
+    "avatar": "/images/games/apex-legends/characters/lifeline.png"
+  },
+  "ミラージュ": {
+    "avatar": "/images/games/apex-legends/characters/mirage.png"
+  },
+  "ローバ": {
+    "avatar": "/images/games/apex-legends/characters/loba.png"
+  },
+  "ニューキャッスル": {
+    "avatar": "/images/games/apex-legends/characters/newcastle.png"
+  },
+  "コンジット": {
+    "avatar": "/images/games/apex-legends/characters/conduit.png"
+  }
+}

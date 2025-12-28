@@ -18,7 +18,9 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
         if (!res.ok) return;
         const data = (await res.json()) as CharacterMetaMap;
         if (alive) setMeta(data);
-      } catch {}
+      } catch (error) {
+        console.error(`Error loading characters.json for ${slug}:`, error);
+      }
     })();
     return () => {
       alive = false;
@@ -27,8 +29,24 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
 
   const items = useMemo(() => {
     return list.map((name) => {
+      if (!name || name.trim().length === 0) {
+        return { name: "Unknown", avatar: "", roleIcon: undefined, roleName: undefined };
+      }
+
       const key = slugify(name);
-      const m = meta?.[key];
+      const m = meta?.[name] ?? meta?.[key];
+
+      // If we can't find character in metadata and slugify returns empty (Japanese chars),
+      // it means this character doesn't belong to this game
+      if (!m && key === "") {
+        return {
+          name,
+          avatar: "",
+          roleIcon: undefined,
+          roleName: "Wrong Game"
+        };
+      }
+
       const avatar = m?.avatar ?? buildCharacterAvatarPath(slug, name);
       const roleKey = m?.roleKey;
       const roleIcon = roleKey ? (m?.roleIcon ?? buildRoleIconPath(slug, roleKey)) : undefined;
