@@ -2,7 +2,15 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SmartImage } from "@/components/common/SmartImage";
-import { OVERWATCH_CHARACTERS, OVERWATCH_RANKS } from "@/constants/gameAssets";
+import {
+  OVERWATCH_CHARACTERS,
+  OVERWATCH_RANKS,
+  OVERWATCH_ROLES,
+  parseOverwatchRoleRanks,
+  stringifyOverwatchRoleRanks,
+  type OverwatchRoleKey,
+  type OverwatchRoleRanks,
+} from "@/constants/gameAssets";
 import { cn } from "@/lib/utils";
 import type { GameProfileFormInnerProps } from "./types";
 import { Field } from "./GameProfileFormDefault";
@@ -13,8 +21,12 @@ type Props = GameProfileFormInnerProps;
 export function OverwatchGameProfileForm({ mode, initial, onSave, onDelete }: Props) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [currentRank, setCurrentRank] = useState<string>(() => normalizeOverwatchRank(initial?.currentRank));
-  const [highestRank, setHighestRank] = useState<string>(() => normalizeOverwatchRank(initial?.highestRank));
+  const [currentRanks, setCurrentRanks] = useState<OverwatchRoleRanks>(() =>
+    parseOverwatchRoleRanks(initial?.currentRank)
+  );
+  const [highestRanks, setHighestRanks] = useState<OverwatchRoleRanks>(() =>
+    parseOverwatchRoleRanks(initial?.highestRank)
+  );
   const [characters, setCharacters] = useState<string[]>(() => initial?.mainCharacters || []);
 
   function toggleCharacter(value: string) {
@@ -26,10 +38,23 @@ export function OverwatchGameProfileForm({ mode, initial, onSave, onDelete }: Pr
     });
   }
 
+  function updateCurrentRank(role: OverwatchRoleKey, value: string) {
+    setCurrentRanks((prev) => ({ ...prev, [role]: value }));
+  }
+
+  function updateHighestRank(role: OverwatchRoleKey, value: string) {
+    setHighestRanks((prev) => ({ ...prev, [role]: value }));
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
+    // Remove old rank fields and set JSON values
+    fd.delete("currentRank");
+    fd.delete("highestRank");
+    fd.set("currentRank", stringifyOverwatchRoleRanks(currentRanks));
+    fd.set("highestRank", stringifyOverwatchRoleRanks(highestRanks));
     fd.delete("mainCharacters[]");
     characters.forEach((name) => fd.append("mainCharacters[]", name));
     start(async () => {
@@ -60,29 +85,36 @@ export function OverwatchGameProfileForm({ mode, initial, onSave, onDelete }: Pr
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">
           ランク
-          <span className="ml-2 align-middle text-xs text-muted-foreground">(任意)</span>
+          <span className="ml-2 align-middle text-xs text-muted-foreground">(任意・ロール別)</span>
         </h2>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">現ランク</p>
-            <RankGrid
-              ranks={OVERWATCH_RANKS}
-              selected={currentRank}
-              onSelect={setCurrentRank}
-              name="currentRank"
-              slug="overwatch-2"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">最高ランク</p>
-            <RankGrid
-              ranks={OVERWATCH_RANKS}
-              selected={highestRank}
-              onSelect={setHighestRank}
-              name="highestRank"
-              slug="overwatch-2"
-            />
-          </div>
+        <div className="space-y-6">
+          {OVERWATCH_ROLES.map((role) => (
+            <div key={role.key} className="space-y-3 rounded-lg border border-border p-4">
+              <h3 className="text-sm font-medium">{role.labelJa} ({role.label})</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">現ランク</p>
+                  <RankGrid
+                    ranks={OVERWATCH_RANKS}
+                    selected={currentRanks[role.key] || ""}
+                    onSelect={(v) => updateCurrentRank(role.key, v)}
+                    name={`currentRank_${role.key}`}
+                    slug="overwatch-2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">最高ランク</p>
+                  <RankGrid
+                    ranks={OVERWATCH_RANKS}
+                    selected={highestRanks[role.key] || ""}
+                    onSelect={(v) => updateHighestRank(role.key, v)}
+                    name={`highestRank_${role.key}`}
+                    slug="overwatch-2"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -165,13 +197,5 @@ export function OverwatchGameProfileForm({ mode, initial, onSave, onDelete }: Pr
       </div>
     </form>
   );
-}
-
-function normalizeOverwatchRank(raw?: string | null): string {
-  if (!raw) return "";
-  const lower = raw.toLowerCase();
-  const tiers = OVERWATCH_RANKS.map((r) => r.value.toLowerCase());
-  const found = tiers.find((t) => lower.includes(t));
-  return found ? OVERWATCH_RANKS.find((r) => r.value.toLowerCase() === found)!.value : raw;
 }
 

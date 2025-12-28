@@ -1,6 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SmartImage } from "@/components/common/SmartImage";
-import { buildRankBadgePath } from "@/constants/gameAssets";
+import {
+  buildRankBadgePath,
+  OVERWATCH_ROLES,
+  parseOverwatchRoleRanks,
+} from "@/constants/gameAssets";
 
 export function GameRankCard({
   slug,
@@ -11,6 +15,13 @@ export function GameRankCard({
   currentRank?: string | null;
   highestRank?: string | null;
 }) {
+  // Overwatch 2 uses role-based ranks stored as JSON
+  if (slug === "overwatch-2") {
+    return (
+      <OverwatchRankCard currentRank={currentRank} highestRank={highestRank} />
+    );
+  }
+
   const has = Boolean(currentRank || highestRank);
   return (
     <Card className={!has ? "border-dashed opacity-70" : undefined}>
@@ -26,6 +37,54 @@ export function GameRankCard({
             {highestRank ? (
               <RankBadge slug={slug} rank={highestRank} label="Best" />
             ) : null}
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">未設定</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OverwatchRankCard({
+  currentRank,
+  highestRank,
+}: {
+  currentRank?: string | null;
+  highestRank?: string | null;
+}) {
+  const currentRanks = parseOverwatchRoleRanks(currentRank);
+  const highestRanks = parseOverwatchRoleRanks(highestRank);
+  const hasAny = OVERWATCH_ROLES.some(
+    (r) => currentRanks[r.key] || highestRanks[r.key]
+  );
+
+  return (
+    <Card className={!hasAny ? "border-dashed opacity-70" : undefined}>
+      <CardHeader>
+        <CardTitle className="text-sm">Rank (ロール別)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {hasAny ? (
+          <div className="space-y-3">
+            {OVERWATCH_ROLES.map((role) => {
+              const current = currentRanks[role.key];
+              const highest = highestRanks[role.key];
+              if (!current && !highest) return null;
+              return (
+                <div key={role.key} className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{role.labelJa}</p>
+                  <div className="flex items-center gap-3">
+                    {current ? (
+                      <RankBadge slug="overwatch-2" rank={current} label="Current" />
+                    ) : null}
+                    {highest ? (
+                      <RankBadge slug="overwatch-2" rank={highest} label="Best" />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-sm text-muted-foreground">未設定</div>
