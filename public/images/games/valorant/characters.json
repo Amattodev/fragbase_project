@@ -1,0 +1,77 @@
+{
+  "ジェット": {
+    "avatar": "/images/games/valorant/characters/jett.png"
+  },
+  "レイズ": {
+    "avatar": "/images/games/valorant/characters/raze.png"
+  },
+  "フェニックス": {
+    "avatar": "/images/games/valorant/characters/phoenix.png"
+  },
+  "レイナ": {
+    "avatar": "/images/games/valorant/characters/reyna.png"
+  },
+  "ヨル": {
+    "avatar": "/images/games/valorant/characters/yoru.png"
+  },
+  "ネオン": {
+    "avatar": "/images/games/valorant/characters/neon.png"
+  },
+  "アイソ": {
+    "avatar": "/images/games/valorant/characters/iso.png"
+  },
+  "セージ": {
+    "avatar": "/images/games/valorant/characters/sage.png"
+  },
+  "サイファー": {
+    "avatar": "/images/games/valorant/characters/cypher.png"
+  },
+  "キルジョイ": {
+    "avatar": "/images/games/valorant/characters/killjoy.png"
+  },
+  "チェンバー": {
+    "avatar": "/images/games/valorant/characters/chamber.png"
+  },
+  "デッドロック": {
+    "avatar": "/images/games/valorant/characters/deadlock.png"
+  },
+  "ヴァイス": {
+    "avatar": "/images/games/valorant/characters/vyse.png"
+  },
+  "ブリーチ": {
+    "avatar": "/images/games/valorant/characters/breach.png"
+  },
+  "ソーヴァ": {
+    "avatar": "/images/games/valorant/characters/sova.png"
+  },
+  "スカイ": {
+    "avatar": "/images/games/valorant/characters/skye.png"
+  },
+  "KAY/O": {
+    "avatar": "/images/games/valorant/characters/kayo.png"
+  },
+  "フェイド": {
+    "avatar": "/images/games/valorant/characters/fade.png"
+  },
+  "ゲッコー": {
+    "avatar": "/images/games/valorant/characters/gekko.png"
+  },
+  "オーメン": {
+    "avatar": "/images/games/valorant/characters/omen.png"
+  },
+  "ブリムストーン": {
+    "avatar": "/images/games/valorant/characters/brimstone.png"
+  },
+  "ヴァイパー": {
+    "avatar": "/images/games/valorant/characters/viper.png"
+  },
+  "アストラ": {
+    "avatar": "/images/games/valorant/characters/astra.png"
+  },
+  "ハーバー": {
+    "avatar": "/images/games/valorant/characters/harbor.png"
+  },
+  "クローヴ": {
+    "avatar": "/images/games/valorant/characters/clove.png"
+  }
+}

@@ -26,15 +26,17 @@ export function GameCard({
             // use public path images
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`/games/${slug}.svg`}
+              src={`/games/${slug}.png`}
               alt={name}
               className="h-14 w-14 object-contain"
               onError={(e) => {
-                // try png then jpg then fallback letters
+                // try webp then svg then jpg then fallback letters
                 const el = e.currentTarget as HTMLImageElement;
-                if (el.src.endsWith(`${slug}.svg`)) {
-                  el.src = `/games/${slug}.png`;
-                } else if (el.src.endsWith(`${slug}.png`)) {
+                if (el.src.endsWith(`${slug}.png`)) {
+                  el.src = `/games/${slug}.webp`;
+                } else if (el.src.endsWith(`${slug}.webp`)) {
+                  el.src = `/games/${slug}.svg`;
+                } else if (el.src.endsWith(`${slug}.svg`)) {
                   el.src = `/games/${slug}.jpg`;
                 } else {
                   setImageError(true);

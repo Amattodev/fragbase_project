@@ -1,12 +1,10 @@
 "use client";
 import dynamic from "next/dynamic";
-import {
-  Image as ImageIcon,
-  Video as VideoIcon,
-  Youtube,
-  Twitch,
-  Twitter,
-} from "lucide-react";
+import { Image as ImageIcon, Video as VideoIcon } from "lucide-react";
+import TikTokIcon from "@/types/icons/TikTokIcon";
+import TwitchIcon from "@/types/icons/TwitchIcon";
+import XIcon from "@/types/icons/XIcon";
+import YoutubeIcon from "@/types/icons/YoutubeIcon";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -401,7 +399,7 @@ export default function EditorComponent({
         aria-label="YouTube を埋め込む"
         title="YouTube を埋め込む"
       >
-        <Youtube className="h-4 w-4" />
+        <YoutubeIcon className="h-4 w-4" />
       </Button>
       <Button
         onClick={() => handleVideoEmbed("twitch")}
@@ -410,7 +408,7 @@ export default function EditorComponent({
         aria-label="Twitch を埋め込む"
         title="Twitch を埋め込む"
       >
-        <Twitch className="h-4 w-4" />
+        <TwitchIcon className="h-4 w-4" />
       </Button>
       <Button
         onClick={() => handleVideoEmbed("tiktok")}
@@ -419,16 +417,7 @@ export default function EditorComponent({
         aria-label="TikTok を埋め込む"
         title="TikTok を埋め込む"
       >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          aria-hidden="true"
-        >
-          <path
-            d="M15.5 4.5c.4 1.3 1.4 2.3 2.7 2.7v2.3c-1.1-.1-2.1-.5-3-1.1v5.7c0 2.9-2.4 5.2-5.3 5.1-2.8 0-5.1-2.3-5.1-5.1 0-2.9 2.3-5.2 5.1-5.2.3 0 .6 0 .9.1v2.3c-.3-.1-.6-.2-.9-.2-1.6 0-2.9 1.3-2.9 3 0 1.6 1.3 2.9 2.9 2.9 1.6 0 2.9-1.3 2.9-3V4.5h2.7z"
-            fill="currentColor"
-          />
-        </svg>
+        <TikTokIcon className="h-4 w-4" />
       </Button>
       <Button
         onClick={handleXEmbed}
@@ -437,7 +426,7 @@ export default function EditorComponent({
         aria-label="X（Twitter）を埋め込む"
         title="X（Twitter）を埋め込む"
       >
-        <Twitter className="h-4 w-4" />
+        <XIcon className="h-4 w-4" />
       </Button>
       {hasUnsavedChanges && (
         <div className="flex items-center text-sm text-destructive">

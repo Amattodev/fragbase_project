@@ -30,7 +30,7 @@ export function buildRoleIconPath(slug: string, roleKey: string) {
 
 export function buildRankBadgePath(slug: string, rankLabel: string) {
   const key = slugify(rankLabel);
-  return `/images/games/${slug}/ranks/${key}.png`;
+  return `/images/games/${slug}/ranks/${key}.webp`;
 }
 
 export type GameRankDef = {
@@ -101,14 +101,50 @@ export const OVERWATCH_RANKS: GameRankDef[] = [
   { value: "Diamond", label: "Diamond" },
   { value: "Master", label: "Master" },
   { value: "Grandmaster", label: "Grandmaster" },
-  { value: "Champion", label: "Champion" },
+  { value: "Top 500", label: "Top 500" },
 ];
+
+export type OverwatchRoleKey = "tank" | "damage" | "support";
+
+export const OVERWATCH_ROLES: { key: OverwatchRoleKey; label: string; labelJa: string }[] = [
+  { key: "tank", label: "Tank", labelJa: "タンク" },
+  { key: "damage", label: "Damage", labelJa: "ダメージ" },
+  { key: "support", label: "Support", labelJa: "サポート" },
+];
+
+// Overwatch 2 のロール別ランク型
+export type OverwatchRoleRanks = {
+  [K in OverwatchRoleKey]?: string;
+};
+
+// JSON文字列からOverwatchRoleRanksをパース
+export function parseOverwatchRoleRanks(json?: string | null): OverwatchRoleRanks {
+  if (!json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed as OverwatchRoleRanks;
+    }
+    // 旧形式（単一文字列）の場合は空を返す
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+// OverwatchRoleRanksをJSON文字列に変換
+export function stringifyOverwatchRoleRanks(ranks: OverwatchRoleRanks): string {
+  const filtered = Object.fromEntries(
+    Object.entries(ranks).filter(([, v]) => v && v.trim() !== "")
+  );
+  return Object.keys(filtered).length > 0 ? JSON.stringify(filtered) : "";
+}
 
 export const OVERWATCH_CHARACTERS: GameCharacterDef[] = [
   // support
   { value: "イラリー", label: "イラリー", imagePath: "/images/games/overwatch-2/characters/illari.png" },
   { value: "ルシオ", label: "ルシオ", imagePath: "/images/games/overwatch-2/characters/lucio.png" },
-  { value: "ライフウィーバー", label: "ライフウィーバー", imagePath: "/images/games/overwatch-2/characters/lifeweaver.png" },
+  { value: "ライフウィーバー", label: "ライフウィーバー", imagePath: "/images/games/overwatch-2/characters/weaver.png" },
   { value: "モイラ", label: "モイラ", imagePath: "/images/games/overwatch-2/characters/moira.png" },
   { value: "マーシー", label: "マーシー", imagePath: "/images/games/overwatch-2/characters/mercy.png" },
   { value: "ブルギッテ", label: "ブルギッテ", imagePath: "/images/games/overwatch-2/characters/brigitte.png" },
@@ -181,7 +217,7 @@ export const VALORANT_AGENTS: GameCharacterDef[] = [
   { value: "スカイ", label: "スカイ", imagePath: "/images/games/valorant/characters/skye.png" },
   { value: "KAY/O", label: "KAY/O", imagePath: "/images/games/valorant/characters/kayo.png" },
   { value: "フェイド", label: "フェイド", imagePath: "/images/games/valorant/characters/fade.png" },
-  { value: "ゲッコー", label: "ゲッコー", imagePath: "/images/games/valorant/characters/gecko.png" },
+  { value: "ゲッコー", label: "ゲッコー", imagePath: "/images/games/valorant/characters/gekko.png" },
   { value: "オーメン", label: "オーメン", imagePath: "/images/games/valorant/characters/omen.png" },
   { value: "ブリムストーン", label: "ブリムストーン", imagePath: "/images/games/valorant/characters/brimstone.png" },
   { value: "ヴァイパー", label: "ヴァイパー", imagePath: "/images/games/valorant/characters/viper.png" },

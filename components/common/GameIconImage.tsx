@@ -10,14 +10,15 @@ export type GameIconImageProps = {
 };
 
 export default function GameIconImage({ slug, name, size = 56, active = false, className }: GameIconImageProps) {
-  const [src, setSrc] = useState(`/games/${slug}.svg`);
+  const [src, setSrc] = useState(`/games/${slug}.png`);
   const [failed, setFailed] = useState(false);
   const initials = useMemo(() => abbr(name, slug), [name, slug]);
   const bg = useMemo(() => hashColor(slug), [slug]);
 
   const onError = () => {
-    if (src.endsWith(`${slug}.svg`)) setSrc(`/games/${slug}.png`);
-    else if (src.endsWith(`${slug}.png`)) setSrc(`/games/${slug}.jpg`);
+    if (src.endsWith(`${slug}.png`)) setSrc(`/games/${slug}.webp`);
+    else if (src.endsWith(`${slug}.webp`)) setSrc(`/games/${slug}.svg`);
+    else if (src.endsWith(`${slug}.svg`)) setSrc(`/games/${slug}.jpg`);
     else setFailed(true);
   };
 
