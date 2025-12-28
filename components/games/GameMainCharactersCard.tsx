@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TruncateWithTooltip } from "@/components/common/TruncateWithTooltip";
 import { SmartImage } from "@/components/common/SmartImage";
 import { useEffect, useMemo, useState } from "react";
-import { buildCharacterAvatarPath, buildRoleIconPath, CharacterMetaMap, slugify } from "@/constants/gameAssets";
+import { buildCharacterAvatarPath, CharacterMetaMap, slugify } from "@/constants/gameAssets";
 
 export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string; mainCharacters?: string[] | null }) {
   const list = (mainCharacters || []).filter((x) => x && x.trim().length > 0);
@@ -30,28 +30,14 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
   const items = useMemo(() => {
     return list.map((name) => {
       if (!name || name.trim().length === 0) {
-        return { name: "Unknown", avatar: "", roleIcon: undefined, roleName: undefined };
+        return { name: "Unknown", avatar: "" };
       }
 
       const key = slugify(name);
       const m = meta?.[name] ?? meta?.[key];
 
-      // If we can't find character in metadata and slugify returns empty (Japanese chars),
-      // it means this character doesn't belong to this game
-      if (!m && key === "") {
-        return {
-          name,
-          avatar: "",
-          roleIcon: undefined,
-          roleName: "Wrong Game"
-        };
-      }
-
       const avatar = m?.avatar ?? buildCharacterAvatarPath(slug, name);
-      const roleKey = m?.roleKey;
-      const roleIcon = roleKey ? (m?.roleIcon ?? buildRoleIconPath(slug, roleKey)) : undefined;
-      const roleName = m?.roleName ?? (roleKey ? titleCase(roleKey) : undefined);
-      return { name, avatar, roleIcon, roleName };
+      return { name, avatar };
     });
   }, [list, meta, slug]);
 
@@ -77,22 +63,6 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
                       </span>
                     }
                   />
-                  <div className="flex items-center gap-2">
-                    {it.roleIcon ? (
-                      <SmartImage
-                        src={it.roleIcon}
-                        alt={`${it.roleName ?? "role"} icon`}
-                        className="h-5 w-5"
-                        imgClassName="h-5 w-5 object-contain"
-                        fallback={<span className="inline-block h-5 w-5 rounded bg-muted" />}
-                      />
-                    ) : (
-                      <span className="inline-block h-5 w-5 rounded bg-muted" />
-                    )}
-                    <span className="text-muted-foreground">
-                      {it.roleName ? <TruncateWithTooltip className="max-w-[120px]">{it.roleName}</TruncateWithTooltip> : "—"}
-                    </span>
-                  </div>
                   <TruncateWithTooltip className="max-w-full text-center font-medium">{it.name}</TruncateWithTooltip>
                 </div>
               </div>
@@ -104,13 +74,6 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
       </CardContent>
     </Card>
   );
-}
-
-function titleCase(s: string) {
-  return s
-    .split(/[\s_-]+/)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
 }
 
 function initial(s: string) {
