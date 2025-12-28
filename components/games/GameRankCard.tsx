@@ -1,14 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SmartImage } from "@/components/common/SmartImage";
+import { buildRankBadgePath } from "@/constants/gameAssets";
 
 export function GameRankCard({
+  slug,
   currentRank,
   highestRank,
 }: {
+  slug: string;
   currentRank?: string | null;
   highestRank?: string | null;
 }) {
   const has = Boolean(currentRank || highestRank);
-  const arrow = getTrendArrow(currentRank, highestRank);
   return (
     <Card className={!has ? "border-dashed opacity-70" : undefined}>
       <CardHeader>
@@ -16,14 +19,12 @@ export function GameRankCard({
       </CardHeader>
       <CardContent>
         {has ? (
-          <div className="flex items-center gap-2 text-sm">
-            {currentRank ? <span>Current: {currentRank}</span> : null}
-            {currentRank && highestRank ? <span className="text-muted-foreground">/</span> : null}
-            {highestRank ? <span>Best: {highestRank}</span> : null}
-            {arrow ? (
-              <span aria-hidden className="ml-1 text-muted-foreground">
-                {arrow}
-              </span>
+          <div className="flex items-center gap-4">
+            {currentRank ? (
+              <RankBadge slug={slug} rank={currentRank} label="Current" />
+            ) : null}
+            {highestRank ? (
+              <RankBadge slug={slug} rank={highestRank} label="Best" />
             ) : null}
           </div>
         ) : (
@@ -34,20 +35,22 @@ export function GameRankCard({
   );
 }
 
-function getTrendArrow(current?: string | null, peak?: string | null): string | null {
-  if (!current || !peak) return null;
-  if (current === peak) return null;
-  // Try numeric comparison if both contain a number
-  const n1 = extractFirstNumber(current);
-  const n2 = extractFirstNumber(peak);
-  if (n1 != null && n2 != null) {
-    if (n1 < n2) return "↑";
-    return null;
-  }
-  return null;
-}
-
-function extractFirstNumber(s: string): number | null {
-  const m = s.match(/\d+(?:\.\d+)?/);
-  return m ? Number(m[0]) : null;
+function RankBadge({ slug, rank, label }: { slug: string; rank: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <SmartImage
+        src={buildRankBadgePath(slug, rank)}
+        alt={rank}
+        className="h-12 w-12"
+        imgClassName="h-12 w-12 object-contain"
+        fallback={
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+            {rank}
+          </span>
+        }
+      />
+      <span className="text-xs font-medium">{rank}</span>
+    </div>
+  );
 }

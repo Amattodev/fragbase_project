@@ -34,7 +34,7 @@ export default async function UserGameProfileViewPage({ params }: { params: { us
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-5 space-y-4">
-          <GameRankCard currentRank={profile.currentRank} highestRank={profile.highestRank} />
+          <GameRankCard slug={game.slug} currentRank={profile.currentRank} highestRank={profile.highestRank} />
           <GameAccountCard accountUsername={profile.accountUsername} accountId={profile.accountId} />
           <GameNotesCard notes={profile.notes} />
         </div>

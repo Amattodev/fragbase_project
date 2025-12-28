@@ -30,7 +30,7 @@ export function buildRoleIconPath(slug: string, roleKey: string) {
 
 export function buildRankBadgePath(slug: string, rankLabel: string) {
   const key = slugify(rankLabel);
-  return `/images/games/${slug}/ranks/${key}.png`;
+  return `/images/games/${slug}/ranks/${key}.webp`;
 }
 
 export type GameRankDef = {
@@ -101,7 +101,7 @@ export const OVERWATCH_RANKS: GameRankDef[] = [
   { value: "Diamond", label: "Diamond" },
   { value: "Master", label: "Master" },
   { value: "Grandmaster", label: "Grandmaster" },
-  { value: "Champion", label: "Champion" },
+  { value: "Top 500", label: "Top 500" },
 ];
 
 export const OVERWATCH_CHARACTERS: GameCharacterDef[] = [
