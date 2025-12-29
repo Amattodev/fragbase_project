@@ -37,7 +37,7 @@ export function GameAccountCard({
             ) : null}
           </div>
         ) : (
-          <div className="text-muted-foreground">未設定</div>
+          <div className="text-muted-foreground">Not set</div>
         )}
       </CardContent>
     </Card>

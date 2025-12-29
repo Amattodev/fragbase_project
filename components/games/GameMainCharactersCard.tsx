@@ -44,7 +44,7 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
   return (
     <Card className={!hasAny ? "border-dashed opacity-70" : undefined}>
       <CardHeader>
-        <CardTitle className="text-sm">メインキャラ</CardTitle>
+        <CardTitle className="text-sm">Main Characters</CardTitle>
       </CardHeader>
       <CardContent>
         {hasAny ? (
@@ -69,7 +69,7 @@ export function GameMainCharactersCard({ slug, mainCharacters }: { slug: string;
             ))}
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">未設定</div>
+          <div className="text-sm text-muted-foreground">Not set</div>
         )}
       </CardContent>
     </Card>
