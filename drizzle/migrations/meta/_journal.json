@@ -15,6 +15,13 @@
       "when": 1757438240263,
       "tag": "0001_gorgeous_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1766997656501,
+      "tag": "0002_last_starjammers",
+      "breakpoints": true
     }
   ]
 }

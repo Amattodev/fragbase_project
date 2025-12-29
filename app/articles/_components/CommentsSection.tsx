@@ -1,11 +1,12 @@
 "use client";
 import { ChevronDown, ChevronUp, Heart, MessageCircle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MAX_AUTHOR_NAME_LENGTH, MAX_COMMENT_LENGTH } from "@/constants";
+import { MAX_COMMENT_LENGTH } from "@/constants";
 import type { Comment } from "@/lib/services/comments";
 import {
   getComments,
@@ -21,12 +22,14 @@ function CommentItem({
   onUpdate,
   onReply,
   depth = 0,
+  isLoggedIn = false,
 }: {
   comment: Comment;
   postId: number;
   onUpdate: () => void;
   onReply?: (parentId: number) => void;
   depth?: number;
+  isLoggedIn?: boolean;
 }) {
   const [likesCount, setLikesCount] = useState(comment.likesCount);
   const [isLiked, setIsLiked] = useState(comment.isLiked);
@@ -84,14 +87,39 @@ function CommentItem({
   return (
     <div className={`${depth > 0 ? "ml-8 mt-3" : "mb-4"}`}>
       <div className="rounded-lg border border-gray-700 bg-[var(--color-surface)] p-4">
-        <div className="mb-2 flex items-start justify-between">
-          <span className="font-medium text-[var(--color-accent)]">{comment.author}</span>
-          <span className="text-sm text-gray-400">{comment.createdAt}</span>
+        <div className="mb-2 flex items-start gap-3">
+          {/* ユーザーアイコン */}
+          {comment.user?.image ? (
+            <img
+              src={comment.user.image}
+              alt={comment.user.name || comment.author}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600">
+              <span className="text-sm text-gray-300">👤</span>
+            </div>
+          )}
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              {comment.user?.username ? (
+                <Link
+                  href={`/profile/${comment.user.username}`}
+                  className="font-medium text-[var(--color-accent)] hover:underline"
+                >
+                  {comment.user.name || comment.user.username}
+                </Link>
+              ) : (
+                <span className="font-medium text-[var(--color-accent)]">{comment.author}</span>
+              )}
+              <span className="text-sm text-gray-400">{comment.createdAt}</span>
+            </div>
+          </div>
         </div>
-        <p className="mb-3 whitespace-pre-wrap text-[var(--color-subtle-text)]">{comment.content}</p>
+        <p className="mb-3 whitespace-pre-wrap text-[var(--color-subtle-text)] pl-11">{comment.content}</p>
 
         {/* アクションボタン */}
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-4 text-sm pl-11">
           {/* いいねボタン */}
           <button
             onClick={handleLike}
@@ -104,8 +132,8 @@ function CommentItem({
             <span>{likesCount}</span>
           </button>
 
-          {/* 返信ボタン */}
-          {depth === 0 && (
+          {/* 返信ボタン（ログイン時のみ） */}
+          {depth === 0 && isLoggedIn && (
             <button
               onClick={() => onReply?.(comment.id)}
               className="flex items-center gap-1 text-gray-400 hover:text-gray-300"
@@ -148,6 +176,7 @@ function CommentItem({
               onUpdate={onUpdate}
               onReply={onReply}
               depth={depth + 1}
+              isLoggedIn={isLoggedIn}
             />
           ))}
         </div>
@@ -157,15 +186,17 @@ function CommentItem({
 }
 
 export default function CommentSection({ postId }: { postId: number }) {
+  const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsCount, setCommentsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState("");
-  const [author, setAuthor] = useState("");
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+
+  const isLoggedIn = !!session?.user;
 
   const getUserIdentifier = () => {
     let id = localStorage.getItem("userIdentifier");
@@ -222,14 +253,12 @@ export default function CommentSection({ postId }: { postId: number }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || submitting) return;
+    if (!content.trim() || submitting || !isLoggedIn) return;
 
     setSubmitting(true);
     try {
       const created = await createComment(postId, {
         content: content.trim(),
-        author: author.trim() || null,
-        userIdentifier: getUserIdentifier(),
         parentId: replyingTo ?? undefined,
       });
       if (created) {
@@ -243,18 +272,18 @@ export default function CommentSection({ postId }: { postId: number }) {
           setCommentsCount(commentsCount + 1);
         }
         setContent("");
-        setAuthor("");
         setReplyingTo(null);
       }
     } catch (error) {
       console.error("コメント投稿エラー:", error);
-      alert("コメントの投稿中にエラーが発生しました");
+      alert("コメントの投稿に失敗しました。ログインしてから再度お試しください。");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleReply = (parentId: number) => {
+    if (!isLoggedIn) return;
     setReplyingTo(parentId);
     document.getElementById("comment-input")?.scrollIntoView({
       behavior: "smooth",
@@ -273,53 +302,70 @@ export default function CommentSection({ postId }: { postId: number }) {
     <div className="mt-8 border-t border-gray-700 pt-6">
       <h3 className="mb-4 text-xl font-semibold text-[var(--color-text)]">コメント ({commentsCount})</h3>
 
-      {/* 返信中の表示 */}
-      {replyingTo && (
-        <div className="mb-3 rounded border border-[var(--color-accent)] bg-[var(--color-surface)] p-2">
-          <span className="text-sm text-[var(--color-accent)]">
-            返信中...
-            <button
-              type="button"
-              onClick={() => setReplyingTo(null)}
-              className="ml-2 text-gray-400 hover:text-gray-300"
-            >
-              キャンセル
-            </button>
-          </span>
+      {/* コメント投稿フォーム（ログイン時のみ） */}
+      {isLoggedIn ? (
+        <>
+          {/* 返信中の表示 */}
+          {replyingTo && (
+            <div className="mb-3 rounded border border-[var(--color-accent)] bg-[var(--color-surface)] p-2">
+              <span className="text-sm text-[var(--color-accent)]">
+                返信中...
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="ml-2 text-gray-400 hover:text-gray-300"
+                >
+                  キャンセル
+                </button>
+              </span>
+            </div>
+          )}
+
+          <form id="comment-form" onSubmit={handleSubmit} className="mb-6">
+            <div className="flex items-start gap-3">
+              {/* ログインユーザーのアイコン */}
+              {session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt={session.user.name || "ユーザー"}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-600">
+                  <span className="text-sm text-gray-300">👤</span>
+                </div>
+              )}
+              <div className="flex-1 space-y-3">
+                <Textarea
+                  id="comment-input"
+                  placeholder={replyingTo ? "返信を入力してください" : "コメントを入力してください"}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[100px] border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)]"
+                  maxLength={MAX_COMMENT_LENGTH}
+                  required
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{content.length}/{MAX_COMMENT_LENGTH}文字</span>
+                  <Button
+                    type="submit"
+                    disabled={!content.trim() || submitting}
+                    className="bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
+                  >
+                    {submitting ? "投稿中..." : replyingTo ? "返信する" : "コメントする"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </>
+      ) : (
+        <div className="mb-6 rounded-lg border border-gray-700 bg-[var(--color-surface)] p-4 text-center">
+          <p className="text-sm text-gray-400">
+            コメントするには<Link href="/api/auth/signin" className="text-[var(--color-accent)] hover:underline">ログイン</Link>してください
+          </p>
         </div>
       )}
-
-      {/* コメント投稿フォーム */}
-      <form id="comment-form" onSubmit={handleSubmit} className="mb-6">
-        <div className="space-y-3">
-          <Input
-            type="text"
-            placeholder="お名前（任意）"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            className="border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)]"
-            maxLength={MAX_AUTHOR_NAME_LENGTH}
-          />
-          <Textarea
-            placeholder={replyingTo ? "返信を入力してください" : "コメントを入力してください"}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="min-h-[100px] border-gray-600 bg-[var(--color-surface)] text-[var(--color-text)]"
-            maxLength={MAX_COMMENT_LENGTH}
-            required
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">{content.length}/{MAX_COMMENT_LENGTH}文字</span>
-            <Button
-              type="submit"
-              disabled={!content.trim() || submitting}
-              className="bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)]"
-            >
-              {submitting ? "投稿中..." : replyingTo ? "返信する" : "コメントする"}
-            </Button>
-          </div>
-        </div>
-      </form>
 
       {/* コメント一覧 */}
       <div className="space-y-4">
@@ -330,6 +376,7 @@ export default function CommentSection({ postId }: { postId: number }) {
             postId={postId}
             onUpdate={handleCommentUpdate}
             onReply={handleReply}
+            isLoggedIn={isLoggedIn}
           />
         ))}
 
