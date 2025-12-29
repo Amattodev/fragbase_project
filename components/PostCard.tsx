@@ -23,7 +23,7 @@ export default function PostCard({ post, linkMode = "default", origin = "default
 
   return (
     <Link href={linkHref}>
-      <article className="h-full cursor-pointer rounded-xl border border-border bg-[var(--article-card)] p-6 shadow-sm transition-[background-color,border-color,box-shadow,transform] hover:border-primary/60 hover:shadow-[0_0_24px_rgba(0,245,255,0.25)] hover:-translate-y-[2px]">
+      <article className="flex h-full flex-col cursor-pointer rounded-xl border border-border bg-[var(--article-card)] p-6 shadow-sm transition-[background-color,border-color,box-shadow,transform] hover:border-primary/60 hover:shadow-[0_0_24px_rgba(0,245,255,0.25)] hover:-translate-y-[2px]">
         {/* ゲームカテゴリバッジ */}
         {post.gameCategories.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
