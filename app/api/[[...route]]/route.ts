@@ -1186,12 +1186,27 @@ app.get("/posts/:id/comments", async (c) => {
           .where(eq(postComments.parentId, comment.id))
           .all();
 
+        // ユーザー情報を取得（userIdがある場合）
+        let userInfo = null;
+        if (comment.userId) {
+          const userRow = await db.select().from(users).where(eq(users.id, comment.userId)).get();
+          if (userRow) {
+            userInfo = {
+              id: userRow.id,
+              name: userRow.name,
+              username: userRow.username,
+              image: userRow.image,
+            };
+          }
+        }
+
         return {
           ...comment,
           likesCount: likes.length,
           isLiked,
           repliesCount: replies.length,
-          author: comment.author || "匿名ユーザー",
+          author: userInfo?.name || userInfo?.username || comment.author || "匿名ユーザー",
+          user: userInfo,
           createdAt: comment.createdAt
             ? new Date(comment.createdAt).toLocaleDateString("ja-JP", {
                 year: "numeric",
@@ -1225,7 +1240,7 @@ app.get("/posts/:id/comments", async (c) => {
   }
 });
 
-// コメント投稿（返信対応）
+// コメント投稿（返信対応）- ログイン必須
 app.post("/posts/:id/comments", async (c) => {
   try {
     const db = getDatabase();
@@ -1234,6 +1249,12 @@ app.post("/posts/:id/comments", async (c) => {
 
     if (isNaN(postId)) {
       return c.json({ ok: false, error: "Invalid post ID format" }, 400);
+    }
+
+    // 認証チェック
+    const session = await auth();
+    if (!session?.user?.id) {
+      return c.json({ ok: false, error: "コメントするにはログインが必要です" }, 401);
     }
 
     const body = await c.req.json();
@@ -1267,15 +1288,19 @@ app.post("/posts/:id/comments", async (c) => {
       return c.json({ ok: false, error: "記事が見つかりません", debug: postId }, 404);
     }
 
-    // データベースに挿入
+    // ユーザー情報を取得
+    const userRow = await db.select().from(users).where(eq(users.id, session.user.id)).get();
+
+    // データベースに挿入（userIdを保存）
     const result = await db
       .insert(postComments)
       .values({
         postId: postId,
         parentId: body.parentId || null,
         content: body.content.trim(),
-        author: body.author || null,
-        userIdentifier: body.userIdentifier || null,
+        userId: session.user.id,
+        author: userRow?.name || userRow?.username || null, // 後方互換用
+        userIdentifier: session.user.id, // 後方互換用
       })
       .returning();
 
@@ -1285,7 +1310,13 @@ app.post("/posts/:id/comments", async (c) => {
       postId: insertedComment.postId,
       parentId: insertedComment.parentId,
       content: insertedComment.content,
-      author: insertedComment.author || "匿名ユーザー",
+      author: userRow?.name || userRow?.username || "ユーザー",
+      user: userRow ? {
+        id: userRow.id,
+        name: userRow.name,
+        username: userRow.username,
+        image: userRow.image,
+      } : null,
       likesCount: 0,
       isLiked: false,
       repliesCount: 0,
@@ -1348,12 +1379,27 @@ app.get("/posts/:postId/comments/:commentId/replies", async (c) => {
           .where(eq(postComments.parentId, reply.id))
           .all();
 
+        // ユーザー情報を取得（userIdがある場合）
+        let userInfo = null;
+        if (reply.userId) {
+          const userRow = await db.select().from(users).where(eq(users.id, reply.userId)).get();
+          if (userRow) {
+            userInfo = {
+              id: userRow.id,
+              name: userRow.name,
+              username: userRow.username,
+              image: userRow.image,
+            };
+          }
+        }
+
         return {
           ...reply,
           likesCount: likes.length,
           isLiked,
           repliesCount: subReplies.length,
-          author: reply.author || "匿名ユーザー",
+          author: userInfo?.name || userInfo?.username || reply.author || "匿名ユーザー",
+          user: userInfo,
           createdAt: reply.createdAt
             ? new Date(reply.createdAt).toLocaleDateString("ja-JP", {
                 year: "numeric",

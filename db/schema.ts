@@ -191,8 +191,9 @@ export const postComments = sqliteTable("post_comments", {
     .references(() => posts.id, { onDelete: "cascade" }),
   parentId: integer("parent_id"),
   content: text("content").notNull(),
-  author: text("author"), // コメント投稿者名（オプション）
-  userIdentifier: text("user_identifier"), // 投稿者の識別子（オプション）
+  author: text("author"), // コメント投稿者名（後方互換用）
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }), // ログインユーザーのID
+  userIdentifier: text("user_identifier"), // 投稿者の識別子（後方互換用）
   createdAt: integer("created_at").default(Date.now()),
   updatedAt: integer("updated_at").default(Date.now()),
 });

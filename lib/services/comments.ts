@@ -1,11 +1,19 @@
 import 'client-only';
 
+export type CommentUser = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+};
+
 export type Comment = {
   id: number;
   postId: number;
   parentId: number | null;
   content: string;
   author: string;
+  user: CommentUser | null;
   createdAt: string;
   likesCount: number;
   isLiked: boolean;
@@ -42,15 +50,13 @@ export async function getCommentsCount(postId: number): Promise<number> {
 
 export async function createComment(
   postId: number,
-  payload: { content: string; author: string | null; userIdentifier: string; parentId?: number | null },
+  payload: { content: string; parentId?: number | null },
 ): Promise<Comment> {
   const res = await fetch(`/api/posts/${postId}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       content: payload.content,
-      author: payload.author,
-      userIdentifier: payload.userIdentifier,
       parentId: payload.parentId ?? null,
     }),
   });
