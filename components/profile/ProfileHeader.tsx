@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { SocialIcons } from "@/components/profile/SocialIcons";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,12 @@ export function ProfileHeader({
         </div>
         <div>
           {isMe ? (
-            <Link href="/settings/profile"><Button variant="secondary">プロフィールを編集</Button></Link>
+            <Link href="/settings/profile">
+              <Button variant="secondary" className="rounded-full px-6">
+                <Pencil size={16} className="mr-2" />
+                プロフィールを編集
+              </Button>
+            </Link>
           ) : viewerId ? (
             <form action={async () => { 'use server'; await toggleFollowAction(user.id, user.username); }}>
               <Button type="submit" variant={isFollowing ? "secondary" : "default"}>

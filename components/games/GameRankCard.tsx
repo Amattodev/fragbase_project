@@ -30,7 +30,7 @@ export function GameRankCard({
       </CardHeader>
       <CardContent>
         {has ? (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center gap-4">
             {currentRank ? (
               <RankBadge slug={slug} rank={currentRank} label="Current" />
             ) : null}
@@ -39,7 +39,7 @@ export function GameRankCard({
             ) : null}
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">未設定</div>
+          <div className="text-sm text-muted-foreground">Not set</div>
         )}
       </CardContent>
     </Card>
@@ -62,7 +62,7 @@ function OverwatchRankCard({
   return (
     <Card className={!hasAny ? "border-dashed opacity-70" : undefined}>
       <CardHeader>
-        <CardTitle className="text-sm">Rank (ロール別)</CardTitle>
+        <CardTitle className="text-sm">Rank (by Role)</CardTitle>
       </CardHeader>
       <CardContent>
         {hasAny ? (
@@ -73,8 +73,8 @@ function OverwatchRankCard({
               if (!current && !highest) return null;
               return (
                 <div key={role.key} className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{role.labelJa}</p>
-                  <div className="flex items-center gap-3">
+                  <p className="text-xs text-muted-foreground">{role.label}</p>
+                  <div className="flex items-center justify-center gap-3">
                     {current ? (
                       <RankBadge slug="overwatch-2" rank={current} label="Current" />
                     ) : null}
@@ -87,7 +87,7 @@ function OverwatchRankCard({
             })}
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">未設定</div>
+          <div className="text-sm text-muted-foreground">Not set</div>
         )}
       </CardContent>
     </Card>

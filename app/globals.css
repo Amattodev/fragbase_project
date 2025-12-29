@@ -9,7 +9,7 @@
   /* Base surfaces */
   --background: #02030a; /* bg.base */
   --foreground: #f5f7ff; /* text.primary */
-  --card: #0b1638; /* bg.surface: background よりさらに明るく */
+  --card: #1a1a20; /* bg.surface: 記事カードと統一 */
   --card-foreground: #f5f7ff;
   --article-card: #1a1a20; /* ホーム記事カード専用の面色 */
   --popover: #06081a;
@@ -47,7 +47,7 @@
      将来のために :root と同じ値を維持しておく */
   --background: #02030a;
   --foreground: #f5f7ff;
-  --card: #0b1638;
+  --card: #1a1a20;
   --card-foreground: #f5f7ff;
   --article-card: #1a1a20;
   --popover: #06081a;
